@@ -11,10 +11,12 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
 # -------------------- Allowed Hosts --------------------
 ALLOWED_HOSTS = [
-    'localhost', 
-    '127.0.0.1', 
-    'ems-2171-girkc0pco-yasirkhan-ams-projects.vercel.app'
+    'localhost',
+    '127.0.0.1',
+    'ems-2171-girkc0pco-yasirkhan-ams-projects.vercel.app',
+    'new-ems-data.vercel.app',  # add this
 ]
+
 
 # -------------------- Installed Apps --------------------
 INSTALLED_APPS = [
