@@ -61,12 +61,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'labor_management.wsgi.application'
 
 # -------------------- PostgreSQL Database via Supabase --------------------
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql://postgres:Orchard12%40@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+)
+
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get(
-            "DATABASE_URL",
-            "postgresql://postgres:[Orchard12@]@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
-        ),
+    'default': dj_database_url.parse(
+        DATABASE_URL,
         conn_max_age=600,
         ssl_require=True
     )
