@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -56,19 +55,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'labor_management.wsgi.application'
 
-# -------------------- PostgreSQL Database via Supabase Session Pooler (IPv4 compatible) --------------------
-DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql://postgres:Orchard12%40@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
-)
-
-DATABASES = {
-    'default': dj_database_url.parse(
-        DATABASE_URL,
-        conn_max_age=600,
-        ssl_require=True
-    )
-}
+# -------------------- Supabase REST API Settings --------------------
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://bnftmbsvtqgjzzlfkecv.supabase.co")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "your-public-anon-key")
 
 # -------------------- Password Validators --------------------
 AUTH_PASSWORD_VALIDATORS = [
