@@ -6,3 +6,4 @@ python-decouple==3.8
 pytz==2025.2
 dj_database_url
 psycopg2-binary
+python-docx
