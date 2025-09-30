@@ -58,11 +58,15 @@ TEMPLATES = [
 WSGI_APPLICATION = 'labor_management.wsgi.application'
 
 # ---------------- Supabase Postgres Database ----------------
-DB_PASSWORD = quote_plus('orchard12@')  # URL-encode the password
+# URL-encode the password for safety
+DB_PASSWORD = quote_plus('orchard12@')
+
+# Build full DATABASE_URL
+DATABASE_URL = f"postgresql://postgres:{DB_PASSWORD}@db.agtzxtiqsieldeqwvilh.supabase.co:5432/postgres?sslmode=require"
+
+# Use dj_database_url to parse the URL
 DATABASES = {
-    "default": dj_database_url.config(
-        default=f"postgresql://postgres:{DB_PASSWORD}@db.agtzxtiqsieldeqwvilh.supabase.co:5432/postgres"
-    )
+    "default": dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=True)
 }
 # ------------------------------------------------------------
 
