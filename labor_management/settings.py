@@ -1,13 +1,20 @@
 import os
 from pathlib import Path
+import psycopg2  # PostgreSQL adapter
 
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # -------------------- Secret & Debug --------------------
-SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-dev-key")
-DEBUG = os.environ.get("DEBUG", "True") == "True"
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-dev-key')
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.vercel.app']
+# -------------------- Allowed Hosts --------------------
+ALLOWED_HOSTS = [
+    'localhost', 
+    '127.0.0.1', 
+    'ems-2171-girkc0pco-yasirkhan-ams-projects.vercel.app'
+]
 
 # -------------------- Installed Apps --------------------
 INSTALLED_APPS = [
@@ -25,7 +32,7 @@ INSTALLED_APPS = [
 # -------------------- Middleware --------------------
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # For static files in production
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -55,37 +62,50 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'labor_management.wsgi.application'
 
-# -------------------- Supabase REST API Settings --------------------
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://bnftmbsvtqgjzzlfkecv.supabase.co")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "your-public-anon-key")
+# -------------------- Database --------------------
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "postgres",  # database name
+        "USER": "postgres.bnftmbsvtqgjzzlfkecv",  # pooler user
+        "PASSWORD": "Orchardflower123@",  # your password
+        "HOST": "aws-1-ap-southeast-1.pooler.supabase.com",  # pooler host
+        "PORT": "5432",
+        "OPTIONS": {
+            "sslmode": "require",  # enforce SSL
+        },
+    }
+}
 
-# -------------------- Password Validators --------------------
+
+# -------------------- Password validation --------------------
 AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator', },
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', },
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator', },
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator', },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',},
 ]
 
-# -------------------- Localization --------------------
+# -------------------- Internationalization --------------------
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Karachi'
 USE_I18N = True
 USE_TZ = True
 
-# -------------------- Static & Media Files --------------------
+# -------------------- Static files --------------------
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles_build'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# -------------------- Media files --------------------
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# -------------------- Default Primary Key --------------------
+# -------------------- Default primary key --------------------
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# -------------------- Authentication Redirects --------------------
+# -------------------- Login URLs --------------------
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/login/'
