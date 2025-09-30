@@ -41,27 +41,44 @@ def attendance_list(request):
             attendance_qs = attendance_qs.filter(status=selected_status)
         attendance = attendance_qs.first()
 
-        # Determine status for display
+        # Default values
+        status_display = 'Not Marked'
+        late_flag = False
+        late_minutes = 0
+        worked_hours = 0
+
         if attendance:
             status_display = attendance.get_status_display()
-            late_flag = False
-            late_minutes = 0
+
+            # Calculate late arrival
             if attendance.in_time:
                 shift_start = datetime.combine(selected_date, datetime.strptime("09:15", "%H:%M").time())
                 actual_in = datetime.combine(selected_date, attendance.in_time)
                 if actual_in > shift_start:
                     late_flag = True
                     late_minutes = (actual_in - shift_start).seconds // 60
-        else:
-            status_display = 'Not Marked'
-            late_flag = False
-            late_minutes = 0
+
+            # ✅ Calculate worked hours with lunch deduction
+            if attendance.in_time and attendance.out_time:
+                in_dt = datetime.combine(selected_date, attendance.in_time)
+                out_dt = datetime.combine(selected_date, attendance.out_time)
+
+                total_worked = (out_dt - in_dt).total_seconds() / 3600  # hours
+
+                # Deduct lunch break: 0.5 hr Mon–Thu, 1 hr Friday
+                if selected_date.weekday() == 4:  # Friday
+                    total_worked -= 1
+                else:
+                    total_worked -= 0.5
+
+                worked_hours = round(total_worked, 2) if total_worked > 0 else 0
 
         attendance_records.append({
             'employee': emp,
             'status': status_display,
             'in_time': attendance.in_time if attendance else None,
             'out_time': attendance.out_time if attendance else None,
+            'worked_hours': worked_hours,   # ✅ added worked hours
             'overtime_hours': attendance.overtime_hours if attendance else 0,
             'notes': attendance.notes if attendance else '',
             'is_late': late_flag,
@@ -91,6 +108,7 @@ def attendance_list(request):
         'total_overtime': total_overtime,
     }
     return render(request, 'attendance/list.html', context)
+
 
 
 @login_required
@@ -175,19 +193,35 @@ def delete_attendance(request, pk):
     
     return render(request, 'attendance/delete.html', {'attendance': attendance})
 
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from calendar import monthrange
+from datetime import datetime, timedelta
+from .models import Attendance
+from employees.models import Employee
+
+
+from calendar import monthrange
+from datetime import datetime, timedelta
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from .models import Attendance
+from employees.models import Employee
+
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from calendar import monthrange
+from datetime import datetime, timedelta
+from .models import Attendance
+from employees.models import Employee
+
 @login_required
 def monthly_report(request, employee_id, year=None, month=None):
-    from calendar import monthrange
-    from datetime import datetime, timedelta
-    from .models import Attendance
-    from employees.models import Employee
-
     employee = get_object_or_404(Employee, id=employee_id)
     today = datetime.now().date()
 
     year = int(request.GET.get('year', year if year else today.year))
     month = int(request.GET.get('month', month if month else today.month))
-    
     days_in_month = monthrange(year, month)[1]
 
     attendance_records = Attendance.objects.filter(
@@ -200,6 +234,7 @@ def monthly_report(request, employee_id, year=None, month=None):
 
     calendar_data = []
     total_present = total_absent = total_half_day = total_overtime = total_late_days = 0
+    total_worked_hours = 0.0
 
     for day in range(1, days_in_month + 1):
         date_obj = datetime(year, month, day).date()
@@ -207,9 +242,11 @@ def monthly_report(request, employee_id, year=None, month=None):
         is_late = False
         late_minutes = 0
         overtime_hours = 0
+        worked_hours = 0.0
+        is_holiday = date_obj.weekday() == 6  # Sunday
 
         if attendance:
-            # Count attendance status
+            # Status counts
             if attendance.status == 'present':
                 total_present += 1
             elif attendance.status == 'absent':
@@ -220,9 +257,9 @@ def monthly_report(request, employee_id, year=None, month=None):
             # Overtime
             if attendance.overtime_hours:
                 overtime_hours = attendance.overtime_hours
-                total_overtime += overtime_hours
+                total_overtime += max(overtime_hours,0)  # only positive for OT stats
 
-            # Late check: after 09:15
+            # Late check
             if attendance.in_time:
                 shift_start = datetime.combine(date_obj, datetime.strptime("09:15", "%H:%M").time())
                 actual_in = datetime.combine(date_obj, attendance.in_time)
@@ -230,6 +267,22 @@ def monthly_report(request, employee_id, year=None, month=None):
                     is_late = True
                     total_late_days += 1
                     late_minutes = (actual_in - shift_start).seconds // 60
+
+            # Worked hours calculation
+            if attendance.in_time and attendance.out_time:
+                worked_delta = datetime.combine(date_obj, attendance.out_time) - datetime.combine(date_obj, attendance.in_time)
+                worked_hours = worked_delta.total_seconds() / 3600.0
+
+                # Deduct lunch
+                if date_obj.weekday() == 4:  # Friday
+                    worked_hours -= 1.0
+                elif date_obj.weekday() != 6:  # Monday-Saturday except Sunday
+                    worked_hours -= 0.5
+                # Sunday no lunch deduction, usually holiday
+                # Add overtime (can be negative or positive)
+                worked_hours += overtime_hours
+
+                total_worked_hours += max(worked_hours,0)
 
         calendar_data.append({
             'day': day,
@@ -239,17 +292,13 @@ def monthly_report(request, employee_id, year=None, month=None):
             'is_late': is_late,
             'late_minutes': late_minutes,
             'overtime_hours': overtime_hours,
+            'worked_hours': round(worked_hours,2),
+            'is_holiday': is_holiday,
         })
 
-    # Previous/next month for navigation
-    if month == 1:
-        prev_month, prev_year = 12, year - 1
-    else:
-        prev_month, prev_year = month - 1, year
-    if month == 12:
-        next_month, next_year = 1, year + 1
-    else:
-        next_month, next_year = month + 1, year
+    # Previous/next month
+    prev_month, prev_year = (month-1, year) if month > 1 else (12, year-1)
+    next_month, next_year = (month+1, year) if month < 12 else (1, year+1)
 
     context = {
         'employee': employee,
@@ -262,6 +311,7 @@ def monthly_report(request, employee_id, year=None, month=None):
         'total_half_day': total_half_day,
         'total_overtime': total_overtime,
         'total_late_days': total_late_days,
+        'total_worked_hours': round(total_worked_hours,2),
         'prev_year': prev_year,
         'prev_month': prev_month,
         'next_year': next_year,
@@ -269,3 +319,6 @@ def monthly_report(request, employee_id, year=None, month=None):
     }
 
     return render(request, 'attendance/monthly_report.html', context)
+
+
+
