@@ -212,6 +212,7 @@ from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from calendar import monthrange
 from datetime import datetime, timedelta
+from decimal import Decimal
 from .models import Attendance
 from employees.models import Employee
 
@@ -233,16 +234,17 @@ def monthly_report(request, employee_id, year=None, month=None):
     attendance_dict = {record.date.day: record for record in attendance_records}
 
     calendar_data = []
-    total_present = total_absent = total_half_day = total_overtime = total_late_days = 0
-    total_worked_hours = 0.0
+    total_present = total_absent = total_half_day = total_late_days = 0
+    total_overtime = Decimal('0.0')
+    total_worked_hours = Decimal('0.0')
 
     for day in range(1, days_in_month + 1):
         date_obj = datetime(year, month, day).date()
         attendance = attendance_dict.get(day)
         is_late = False
         late_minutes = 0
-        overtime_hours = 0
-        worked_hours = 0.0
+        overtime_hours = Decimal('0.0')
+        worked_hours = Decimal('0.0')
         is_holiday = date_obj.weekday() == 6  # Sunday
 
         if attendance:
@@ -257,7 +259,7 @@ def monthly_report(request, employee_id, year=None, month=None):
             # Overtime
             if attendance.overtime_hours:
                 overtime_hours = attendance.overtime_hours
-                total_overtime += max(overtime_hours,0)  # only positive for OT stats
+                total_overtime += max(overtime_hours, Decimal('0.0'))
 
             # Late check
             if attendance.in_time:
@@ -271,18 +273,18 @@ def monthly_report(request, employee_id, year=None, month=None):
             # Worked hours calculation
             if attendance.in_time and attendance.out_time:
                 worked_delta = datetime.combine(date_obj, attendance.out_time) - datetime.combine(date_obj, attendance.in_time)
-                worked_hours = worked_delta.total_seconds() / 3600.0
+                worked_hours = Decimal(worked_delta.total_seconds()) / Decimal('3600')
 
                 # Deduct lunch
                 if date_obj.weekday() == 4:  # Friday
-                    worked_hours -= 1.0
+                    worked_hours -= Decimal('1.0')
                 elif date_obj.weekday() != 6:  # Monday-Saturday except Sunday
-                    worked_hours -= 0.5
-                # Sunday no lunch deduction, usually holiday
+                    worked_hours -= Decimal('0.5')
+
                 # Add overtime (can be negative or positive)
                 worked_hours += overtime_hours
 
-                total_worked_hours += max(worked_hours,0)
+                total_worked_hours += max(worked_hours, Decimal('0.0'))
 
         calendar_data.append({
             'day': day,
@@ -291,8 +293,8 @@ def monthly_report(request, employee_id, year=None, month=None):
             'is_today': date_obj == today,
             'is_late': is_late,
             'late_minutes': late_minutes,
-            'overtime_hours': overtime_hours,
-            'worked_hours': round(worked_hours,2),
+            'overtime_hours': float(overtime_hours),
+            'worked_hours': float(round(worked_hours,2)),
             'is_holiday': is_holiday,
         })
 
@@ -309,9 +311,9 @@ def monthly_report(request, employee_id, year=None, month=None):
         'total_present': total_present,
         'total_absent': total_absent,
         'total_half_day': total_half_day,
-        'total_overtime': total_overtime,
+        'total_overtime': float(total_overtime),
         'total_late_days': total_late_days,
-        'total_worked_hours': round(total_worked_hours,2),
+        'total_worked_hours': float(round(total_worked_hours,2)),
         'prev_year': prev_year,
         'prev_month': prev_month,
         'next_year': next_year,
