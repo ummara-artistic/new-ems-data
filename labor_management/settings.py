@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-import dj_database_url  # Make sure dj-database-url is installed
+import dj_database_url  # make sure this is installed
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -65,7 +65,7 @@ DATABASES = {
     'default': dj_database_url.config(
         default=os.environ.get(
             "DATABASE_URL",
-            "postgresql://postgres:[YOUR-PASSWORD]@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+            "postgresql://postgres:[Orchard12@]@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
         ),
         conn_max_age=600,
         ssl_require=True
