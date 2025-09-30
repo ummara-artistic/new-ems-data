@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-import dj_database_url  # make sure this is installed
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -8,11 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-dev-key")
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    '.vercel.app'
-]
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.vercel.app']
 
 # -------------------- Installed Apps --------------------
 INSTALLED_APPS = [
@@ -63,7 +59,7 @@ WSGI_APPLICATION = 'labor_management.wsgi.application'
 # -------------------- PostgreSQL Database via Supabase Session Pooler (IPv4 compatible) --------------------
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql://postgres:Orchard12%40@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+    "postgresql://postgres:Orchard12%40@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
 )
 
 DATABASES = {
