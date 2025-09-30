@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
-
 import dj_database_url  # pip install dj-database-url psycopg2-binary
+from urllib.parse import quote_plus
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -58,9 +58,10 @@ TEMPLATES = [
 WSGI_APPLICATION = 'labor_management.wsgi.application'
 
 # ---------------- Supabase Postgres Database ----------------
+DB_PASSWORD = quote_plus('orchard12@')  # URL-encode the password
 DATABASES = {
     "default": dj_database_url.config(
-        default="postgresql://postgres:[orchard12@]@db.agtzxtiqsieldeqwvilh.supabase.co:5432/postgres"
+        default=f"postgresql://postgres:{DB_PASSWORD}@db.agtzxtiqsieldeqwvilh.supabase.co:5432/postgres"
     )
 }
 # ------------------------------------------------------------
