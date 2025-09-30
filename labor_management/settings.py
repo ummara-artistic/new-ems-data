@@ -61,9 +61,10 @@ TEMPLATES = [
 WSGI_APPLICATION = 'labor_management.wsgi.application'
 
 # -------------------- PostgreSQL Database via Supabase --------------------
+# Password contains special character '@', URL-encoded as %40
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql://postgres:Orchard12%40@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+    "postgresql://postgres:Orchard12%40@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
 )
 
 DATABASES = {
