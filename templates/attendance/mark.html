@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+
+{% block title %}Mark Attendance - Labor Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-calendar-plus me-2"></i>Mark Attendance</h1>
+    <a href="{% url 'attendance:list' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to List
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-clock me-2"></i>Attendance Information
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="employee" class="form-label">Employee *</label>
+                            <select class="form-select" id="employee" name="employee" required>
+                                <option value="">Select Employee</option>
+                                {% for emp in employees %}
+                                    <option value="{{ emp.id }}">{{ emp.full_name }} ({{ emp.get_employee_type_display }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="date" class="form-label">Date *</label>
+                            <input type="date" class="form-control" id="date" name="date" value="{{ today|date:'Y-m-d' }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="status" class="form-label">Status *</label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="">Select Status</option>
+                                <option value="present">Present</option>
+                                <option value="absent">Absent</option>
+                                <option value="half_day">Half Day</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="in_time" class="form-label">In Time</label>
+                            <input type="time" class="form-control" id="in_time" name="in_time">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="out_time" class="form-label">Out Time</label>
+                            <input type="time" class="form-control" id="out_time" name="out_time">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="overtime_hours" class="form-label">Overtime Hours</label>
+                            <input type="number" class="form-control" id="overtime_hours" name="overtime_hours" 
+                                   min="0" step="0.5" placeholder="0.0">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="1" 
+                                      placeholder="Optional notes..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end">
+                        <a href="{% url 'attendance:list' %}" class="btn btn-secondary me-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Mark Attendance
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Quick Mark Section -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="fas fa-bolt me-2"></i>Quick Mark - All Employees
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-success w-100 mb-2" onclick="quickMarkAll('present')">
+                            <i class="fas fa-check me-2"></i>Mark All Present
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-danger w-100 mb-2" onclick="quickMarkAll('absent')">
+                            <i class="fas fa-times me-2"></i>Mark All Absent
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-warning w-100 mb-2" onclick="quickMarkAll('half_day')">
+                            <i class="fas fa-clock me-2"></i>Mark All Half Day
+                        </button>
+                    </div>
+                </div>
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Quick mark will create attendance records for all active employees for today.
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-fill times based on status
+document.getElementById('status').addEventListener('change', function() {
+    var status = this.value;
+    var inTime = document.getElementById('in_time');
+    var outTime = document.getElementById('out_time');
+    
+    if (status === 'present') {
+        if (!inTime.value) inTime.value = '09:00';
+        if (!outTime.value) outTime.value = '17:00';
+    } else if (status === 'half_day') {
+        if (!inTime.value) inTime.value = '09:00';
+        if (!outTime.value) outTime.value = '13:00';
+    } else if (status === 'absent') {
+        inTime.value = '';
+        outTime.value = '';
+    }
+});
+
+function quickMarkAll(status) {
+    if (confirm('Are you sure you want to mark all employees as ' + status + ' for today?')) {
+        // This would require an AJAX call to a separate endpoint
+        // For now, show a message
+        alert('Quick mark feature would be implemented with AJAX calls to mark all employees at once.');
+    }
+}
+</script>
+{% endblock %}

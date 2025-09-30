@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+
+{% block title %}Monthly Report - {{ employee.full_name }} - Labor Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-calendar-alt me-2"></i>Monthly Report</h1>
+    <a href="{% url 'employees:list' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Employees
+    </a>
+</div>
+
+<!-- Employee Info -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8">
+                <h4>{{ employee.full_name }}</h4>
+                <p class="text-muted mb-0">
+                    <span class="badge bg-{% if employee.employee_type == 'labor' %}success{% else %}primary{% endif %} me-2">
+                        {{ employee.get_employee_type_display }}
+                    </span>
+                    {{ month_name }} {{ year }} Report
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="btn-group">
+                    <a href="{% url 'attendance:monthly_report_detailed' employee.id prev_year prev_month %}" 
+                       class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </a>
+                    <a href="{% url 'attendance:monthly_report_detailed' employee.id next_year next_month %}" 
+                       class="btn btn-outline-primary btn-sm">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stats-card bg-success text-white p-3 rounded">
+            <h3>{{ total_present }}</h3>
+            <p>Present Days</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card bg-danger text-white p-3 rounded">
+            <h3>{{ total_absent }}</h3>
+            <p>Absent Days</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card bg-warning text-white p-3 rounded">
+            <h3>{{ total_half_day }}</h3>
+            <p>Half Days</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card bg-primary text-white p-3 rounded">
+            <h3>{{ total_overtime|floatformat:1 }}</h3>
+            <p>Overtime Hours</p>
+        </div>
+    </div>
+    <div class="col-md-3 mt-3">
+        <div class="stats-card bg-danger text-white p-3 rounded">
+            <h3>{{ total_late_days }}</h3>
+            <p>Late Days</p>
+        </div>
+    </div>
+</div>
+
+<!-- Calendar View -->
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-calendar me-2"></i>{{ month_name }} {{ year }} Calendar
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered text-center">
+                <thead>
+                    <tr class="table-light">
+                        <th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for day_data in calendar_data %}
+                        {% if forloop.first or forloop.counter0|divisibleby:7 %}<tr>{% endif %}
+                        <td class="p-2" style="height:80px;">
+                            <div class="h-100 d-flex flex-column justify-content-center
+                                        {% if day_data.is_today %}border border-primary rounded{% endif %}
+                                        {% if day_data.is_late %}late-day{% endif %}">
+                                <strong>{{ day_data.day }}</strong>
+
+                                {% if day_data.attendance %}
+                                    <small class="badge bg-{% if day_data.attendance.status == 'present' %}success{% elif day_data.attendance.status == 'absent' %}danger{% else %}warning{% endif %} mt-1">
+                                        {{ day_data.attendance.get_status_display }}
+                                    </small>
+
+                                    {% if day_data.attendance.overtime_hours %}
+                                        <small class="text-warning">OT: {{ day_data.attendance.overtime_hours }}h</small>
+                                    {% endif %}
+
+                                    {% if day_data.is_late %}
+                                        <small class="text-danger">Late {{ day_data.late_minutes }} min</small>
+                                    {% endif %}
+                                {% else %}
+                                    <small class="text-muted">-</small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        {% if forloop.counter|divisibleby:7 %}</tr>{% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Records -->
+<div class="card mt-4">
+    <div class="card-header">
+        <i class="fas fa-list me-2"></i>Detailed Attendance Records
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover text-center">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>In Time</th>
+                        <th>Out Time</th>
+                        <th>Overtime</th>
+                        <th>Late</th>
+                        <th>Leave Deduction</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for day_data in calendar_data %}
+                        {% if day_data.attendance %}
+                        <tr>
+                            <td>{{ day_data.date|date:"M d, Y" }}</td>
+                            <td>
+                                <span class="badge bg-{% if day_data.attendance.status == 'present' %}success{% elif day_data.attendance.status == 'absent' %}danger{% else %}warning{% endif %}">
+                                    {{ day_data.attendance.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ day_data.attendance.in_time|default:"-" }}</td>
+                            <td>{{ day_data.attendance.out_time|default:"-" }}</td>
+                            <td>
+                                {% if day_data.attendance.overtime_hours %}
+                                    <span class="text-warning">{{ day_data.attendance.overtime_hours }}h</span>
+                                {% else %}-{% endif %}
+                            </td>
+                            <td>
+                                {% if day_data.is_late %}
+                                    <span class="badge bg-danger">Late {{ day_data.late_minutes }} min</span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>{{ day_data.attendance.leave_deduction|default:"-" }}d</td>
+                            <td>{{ day_data.attendance.notes|default:"-" }}</td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Late day circle in calendar */
+.late-day {
+    border: 2px solid red;
+    border-radius: 50%;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}Salary Management - Labor Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-money-bill-wave me-2"></i>Salary Management</h1>
+    <div class="btn-group">
+        <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+            <i class="fas fa-plus me-2"></i>Generate Salary
+        </button>
+        <ul class="dropdown-menu">
+            {% for employee in employees %}
+                <li>
+                    <a class="dropdown-item" href="{% url 'salary:generate' employee.id selected_year selected_month %}">
+                        {{ employee.full_name }}
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+<!-- Filter Section -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="month" class="form-label">Month</label>
+                <select class="form-select" id="month" name="month">
+                    {% for month_num, month_name in months %}
+                        <option value="{{ month_num }}" {% if month_num == selected_month %}selected{% endif %}>
+                            {{ month_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="year" class="form-label">Year</label>
+                <select class="form-select" id="year" name="year">
+                    {% for year in years %}
+                        <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>
+                            {{ year }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="employee" class="form-label">Employee</label>
+                <select class="form-select" id="employee" name="employee">
+                    <option value="">All Employees</option>
+                    {% for emp in employees %}
+                        <option value="{{ emp.id }}" {% if emp.id|stringformat:"s" == selected_employee %}selected{% endif %}>
+                            {{ emp.full_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-search me-1"></i>Filter
+                </button>
+                <a href="{% url 'salary:list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-1"></i>Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Salary Records -->
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-list me-2"></i>Salary Records -
+        {% for month_num, month_name in months %}
+            {% if month_num == selected_month %}{{ month_name }}{% endif %}
+        {% endfor %} {{ selected_year }}
+    </div>
+    <div class="card-body">
+        {% if salary_records %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Type</th>
+                            <th>Present Days</th>
+                            <th>Absent Days</th>
+                            <th>Overtime Hours</th>
+                            <th>Basic Salary</th>
+                            <th>Overtime Amount</th>
+                            <th>Deductions</th>
+                            <th>Dues</th>
+                            <th>Total Salary</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in salary_records %}
+                        <tr>
+                            <td><strong>{{ record.employee.full_name }}</strong></td>
+                            <td>
+                                <span class="badge bg-{% if record.employee.employee_type == 'labor' %}success{% else %}primary{% endif %}">
+                                    {{ record.employee.get_employee_type_display }}
+                                </span>
+                            </td>
+                            <td><span class="badge bg-success">{{ record.days_present }}</span></td>
+                            <td><span class="badge bg-danger">{{ record.days_absent }}</span></td>
+                            <td>
+                                {% if record.overtime_hours %}
+                                    <span class="text-warning">{{ record.overtime_hours|floatformat:1 }}h</span>
+                                {% else %}-{% endif %}
+                            </td>
+                            <td>Rs. {{ record.basic_salary|floatformat:0 }}</td>
+                            <td>
+                                {% if record.overtime_amount %}
+                                    <span class="text-success">Rs. {{ record.overtime_amount|floatformat:0 }}</span>
+                                {% else %}-{% endif %}
+                            </td>
+                            <td>
+                                {% if record.deductions %}
+                                    <span class="text-danger">Rs. {{ record.deductions|floatformat:0 }}</span>
+                                {% else %}-{% endif %}
+                            </td>
+                            <td>
+                                {% if record.dues %}
+                                    <span class="text-info">Rs. {{ record.dues|floatformat:0 }}</span>
+                                {% else %}-{% endif %}
+                            </td>
+                            <td><strong class="text-primary">Rs. {{ record.total_salary|floatformat:0 }}</strong></td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'salary:edit' record.pk %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'salary:pdf' record.pk %}" class="btn btn-sm btn-outline-success">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </a>
+                                    <a href="{% url 'salary:delete' record.pk %}" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-light">
+                            <th colspan="5" class="text-end">Totals:</th>
+                            <th>Rs. {{ totals.total_basic|default:0|floatformat:0 }}</th>
+                            <th>Rs. {{ totals.total_overtime|default:0|floatformat:0 }}</th>
+                            <th>Rs. {{ totals.total_deductions|default:0|floatformat:0 }}</th>
+                            <th>Rs. {{ totals.total_dues|default:0|floatformat:0 }}</th>
+                            <th><strong>Rs. {{ totals.grand_total|default:0|floatformat:0 }}</strong></th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-money-bill-wave fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">No salary records found</h4>
+                <p class="text-muted">
+                    No salary has been generated for
+                    {% for month_num, month_name in months %}
+                        {% if month_num == selected_month %}{{ month_name }}{% endif %}
+                    {% endfor %} {{ selected_year }}.
+                </p>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="fas fa-plus me-2"></i>Generate Salary
+                    </button>
+                    <ul class="dropdown-menu">
+                        {% for employee in employees %}
+                            <li>
+                                <a class="dropdown-item" href="{% url 'salary:generate' employee.id selected_year selected_month %}">
+                                    {{ employee.full_name }}
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

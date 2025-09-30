@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block title %}Attendance - Labor Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-calendar-check me-2"></i>Attendance Management</h1>
+    <a href="{% url 'attendance:mark' %}" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>Mark Attendance
+    </a>
+</div>
+
+<!-- Filter Section -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="date" class="form-label">Date</label>
+                <input type="date" class="form-control" id="date" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-3">
+                <label for="employee" class="form-label">Employee</label>
+                <select class="form-select" id="employee" name="employee">
+                    <option value="">All Employees</option>
+                    {% for emp in employees %}
+                        <option value="{{ emp.id }}" {% if emp.id|stringformat:"s" == selected_employee %}selected{% endif %}>
+                            {{ emp.full_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="status" class="form-label">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">All Status</option>
+                    <option value="present" {% if selected_status == 'present' %}selected{% endif %}>Present</option>
+                    <option value="absent" {% if selected_status == 'absent' %}selected{% endif %}>Absent</option>
+                    <option value="half_day" {% if selected_status == 'half_day' %}selected{% endif %}>Half Day</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-search me-1"></i>Filter
+                </button>
+                <a href="{% url 'attendance:list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-1"></i>Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stats-card bg-secondary text-white p-3 rounded">
+            <h5>{{ total_marked }}</h5>
+            <p>Attendance Marked</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card bg-success text-white p-3 rounded">
+            <h5>{{ total_present }}</h5>
+            <p>Present</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card bg-danger text-white p-3 rounded">
+            <h5>{{ total_absent }}</h5>
+            <p>Absent</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card bg-warning text-white p-3 rounded">
+            <h5>{{ total_half_day }}</h5>
+            <p>Half Days</p>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance Records -->
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-list me-2"></i>Attendance Records - {{ selected_date|date:"F d, Y" }}
+    </div>
+    <div class="card-body">
+        {% if attendance_records %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in attendance_records %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'attendance:monthly_report_detailed' record.employee.id selected_date.year selected_date.month %}" class="text-decoration-none text-dark">
+                                    <strong>{{ record.employee.full_name }}</strong>
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if record.employee.employee_type == 'labor' %}success{% else %}primary{% endif %}">
+                                    {{ record.employee.get_employee_type_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if record.attendance_obj %}
+                                    <span class="badge bg-{% if record.attendance_obj.status == 'present' %}success{% elif record.attendance_obj.status == 'absent' %}danger{% elif record.attendance_obj.status == 'half_day' %}warning{% else %}secondary{% endif %}">
+                                        {{ record.status }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Unmarked</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if record.attendance_obj %}
+                                    <div class="btn-group" role="group">
+                                        <a href="{% url 'attendance:edit' record.attendance_obj.pk %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="{% url 'attendance:delete' record.attendance_obj.pk %}" class="btn btn-sm btn-outline-danger">
+                                            <i class="fas fa-user-slash"></i>
+                                        </a>
+                                    </div>
+                                {% else %}
+                                    <a href="{% url 'attendance:mark' %}?employee={{ record.employee.id }}&date={{ selected_date|date:'Y-m-d' }}" class="btn btn-sm btn-outline-success">
+                                        <i class="fas fa-plus"></i> Mark
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">No employees found</h4>
+                <p class="text-muted">No active employees to list for the selected filters.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var dateInput = document.getElementById('date');
+    if (dateInput && !dateInput.value) {
+        var today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,400 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Labor Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h1>
+    <div class="text-muted">
+        <i class="fas fa-calendar me-1"></i>{{ "now"|date:"F d, Y" }}
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stats-card">
+            <h3>{{ total_employees }}</h3>
+            <p><i class="fas fa-users me-2"></i>Total Employees</p>
+            <small class="text-light">Active employees in system</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card" style="background: linear-gradient(135deg, var(--success-color), #229954);">
+            <h3>{{ total_labor }}</h3>
+            <p><i class="fas fa-hard-hat me-2"></i>Labor Workers</p>
+            <small class="text-light">Field workers</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card" style="background: linear-gradient(135deg, var(--warning-color), #e67e22);">
+            <h3>{{ total_employees_type }}</h3>
+            <p><i class="fas fa-user-tie me-2"></i>Office Employees</p>
+            <small class="text-light">Administrative staff</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card" style="background: linear-gradient(135deg, var(--danger-color), #c0392b);">
+            <h3>{{ today_present }}</h3>
+            <p><i class="fas fa-calendar-check me-2"></i>Present Today</p>
+            <small class="text-light">Out of {{ total_employees }} employees</small>
+        </div>
+    </div>
+</div>
+
+<!-- Today's Attendance & Monthly Stats -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-calendar-day me-2"></i>Today's Attendance
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h4 class="text-success">{{ today_present }}</h4>
+                        <small class="text-muted">Present</small>
+                    </div>
+                    <div class="col-4">
+                        <h4 class="text-danger">{{ today_absent }}</h4>
+                        <small class="text-muted">Absent</small>
+                    </div>
+                    <div class="col-4">
+                        <h4 class="text-warning">{{ today_half_day }}</h4>
+                        <small class="text-muted">Half Day</small>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="progress">
+                        <div class="progress-bar bg-success" style="width: {% widthratio today_present total_employees 100 %}%"></div>
+                        <div class="progress-bar bg-warning" style="width: {% widthratio today_half_day total_employees 100 %}%"></div>
+                        <div class="progress-bar bg-danger" style="width: {% widthratio today_absent total_employees 100 %}%"></div>
+                    </div>
+                    <small class="text-muted">Attendance Distribution</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-line me-2"></i>{{ current_month_name }} {{ current_year }} Stats
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <h5 class="text-success">{{ month_present }}</h5>
+                        <small class="text-muted">Total Present Days</small>
+                    </div>
+                    <div class="col-6">
+                        <h5 class="text-danger">{{ month_absent }}</h5>
+                        <small class="text-muted">Total Absent Days</small>
+                    </div>
+                    <div class="col-6 mt-2">
+                        <h5 class="text-warning">{{ month_overtime|floatformat:1 }}h</h5>
+                        <small class="text-muted">Overtime Hours</small>
+                    </div>
+                    <div class="col-6 mt-2">
+                        <h5 class="text-info">{{ attendance_rate }}%</h5>
+                        <small class="text-muted">Attendance Rate</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Salary Statistics -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-money-bill-wave me-2"></i>Salary Statistics - {{ current_month_name }}
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">Rs. {{ total_salary_paid|floatformat:0 }}</h4>
+                        <small class="text-muted">Total Paid</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-info">Rs. {{ avg_salary|floatformat:0 }}</h4>
+                        <small class="text-muted">Average Salary</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-pie me-2"></i>Employee Distribution
+            </div>
+            <div class="card-body">
+                <canvas id="employeeChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-bolt me-2"></i>Quick Actions
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <a href="{% url 'employees:add' %}" class="btn btn-primary w-100">
+                            <i class="fas fa-user-plus me-2"></i>Add Employee
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{% url 'attendance:mark' %}" class="btn btn-success w-100">
+                            <i class="fas fa-calendar-plus me-2"></i>Mark Attendance
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{% url 'employees:list' %}" class="btn btn-info w-100">
+                            <i class="fas fa-list me-2"></i>View Employees
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{% url 'salary:list' %}" class="btn btn-warning w-100">
+                            <i class="fas fa-money-bill me-2"></i>Salary Records
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts and Recent Data -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-bar me-2"></i>Attendance Trends (Last 6 Months)
+            </div>
+            <div class="card-body">
+                <canvas id="attendanceChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-trophy me-2"></i>Top Performers ({{ current_month_name }})
+            </div>
+            <div class="card-body">
+                {% if top_performers %}
+                    {% for performer in top_performers %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <strong>{{ performer.full_name }}</strong>
+                                <br>
+                                <small class="text-muted">{{ performer.get_employee_type_display }}</small>
+                            </div>
+                            <span class="badge bg-success">{{ performer.present_days }} days</span>
+                        </div>
+                        {% if not forloop.last %}<hr class="my-2">{% endif %}
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center">No attendance data available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activities -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-clock me-2"></i>Recently Added Employees
+            </div>
+            <div class="card-body">
+                {% if recent_employees %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <tbody>
+                                {% for employee in recent_employees %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ employee.full_name }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ employee.joining_date|date:"M d, Y" }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if employee.employee_type == 'labor' %}success{% else %}primary{% endif %}">
+                                            {{ employee.get_employee_type_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <small class="text-muted">Rs. {{ employee.salary|floatformat:0 }}</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-users fa-2x text-muted mb-2"></i>
+                        <p class="text-muted">No employees added yet.</p>
+                        <a href="{% url 'employees:add' %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>Add First Employee
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-history me-2"></i>Recent Attendance
+            </div>
+            <div class="card-body">
+                {% if recent_attendance %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <tbody>
+                                {% for attendance in recent_attendance %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ attendance.employee.full_name }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ attendance.date|date:"M d, Y" }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if attendance.status == 'present' %}success{% elif attendance.status == 'absent' %}danger{% else %}warning{% endif %}">
+                                            {{ attendance.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        {% if attendance.overtime_hours %}
+                                            <small class="text-warning">OT: {{ attendance.overtime_hours }}h</small>
+                                        {% else %}
+                                            <small class="text-muted">-</small>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-calendar-times fa-2x text-muted mb-2"></i>
+                        <p class="text-muted">No attendance records yet.</p>
+                        <a href="{% url 'attendance:mark' %}" class="btn btn-success btn-sm">
+                            <i class="fas fa-plus me-1"></i>Mark Attendance
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Employee Distribution Pie Chart
+const employeeCtx = document.getElementById('employeeChart').getContext('2d');
+const employeeData = {{ employee_distribution|safe }};
+
+new Chart(employeeCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Labor Workers', 'Office Employees'],
+        datasets: [{
+            data: [employeeData.labor, employeeData.employee],
+            backgroundColor: ['#27ae60', '#3498db'],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Attendance Trends Chart
+const attendanceCtx = document.getElementById('attendanceChart').getContext('2d');
+const chartData = {{ chart_data|safe }};
+const chartLabels = {{ chart_labels|safe }};
+
+const presentData = chartData.map(item => item.present);
+const absentData = chartData.map(item => item.absent);
+const halfDayData = chartData.map(item => item.half_day);
+
+new Chart(attendanceCtx, {
+    type: 'bar',
+    data: {
+        labels: chartLabels,
+        datasets: [
+            {
+                label: 'Present',
+                data: presentData,
+                backgroundColor: '#27ae60',
+                borderColor: '#229954',
+                borderWidth: 1
+            },
+            {
+                label: 'Absent',
+                data: absentData,
+                backgroundColor: '#e74c3c',
+                borderColor: '#c0392b',
+                borderWidth: 1
+            },
+            {
+                label: 'Half Day',
+                data: halfDayData,
+                backgroundColor: '#f39c12',
+                borderColor: '#e67e22',
+                borderWidth: 1
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                position: 'top'
+            }
+        }
+    }
+});
+
+// Auto-refresh dashboard every 5 minutes
+setTimeout(function() {
+    location.reload();
+}, 300000); // 5 minutes
+</script>
+{% endblock %}

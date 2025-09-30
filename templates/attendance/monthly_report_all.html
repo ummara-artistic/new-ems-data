@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+
+{% block title %}Monthly Report - {{ month_name }} {{ year }} - Labor Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-calendar-alt me-2"></i>Monthly Attendance Report (All Employees)</h1>
+    <a href="{% url 'attendance:list' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Attendance
+    </a>
+</div>
+
+{% for data in all_data %}
+<!-- Employee Report Block -->
+<div class="card mb-5 shadow-sm">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8">
+                <h4>{{ data.employee.full_name }}</h4>
+                <p class="text-muted mb-0">
+                    <span class="badge bg-{% if data.employee.employee_type == 'labor' %}success{% else %}primary{% endif %} me-2">
+                        {{ data.employee.get_employee_type_display }}
+                    </span>
+                    {{ month_name }} {{ year }} Report
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row mb-3 px-3">
+        <div class="col-md-3">
+            <div class="stats-card" style="background: linear-gradient(135deg, var(--success-color), #229954);">
+                <h3>{{ data.total_present }}</h3>
+                <p><i class="fas fa-check me-2"></i>Present Days</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card" style="background: linear-gradient(135deg, var(--danger-color), #c0392b);">
+                <h3>{{ data.total_absent }}</h3>
+                <p><i class="fas fa-times me-2"></i>Absent Days</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card" style="background: linear-gradient(135deg, var(--warning-color), #e67e22);">
+                <h3>{{ data.total_half_day }}</h3>
+                <p><i class="fas fa-clock me-2"></i>Half Days</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card" style="background: linear-gradient(135deg, var(--accent-color), #2980b9);">
+                <h3>{{ data.total_overtime|floatformat:1 }}</h3>
+                <p><i class="fas fa-plus-circle me-2"></i>Overtime Hours</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar -->
+    <div class="card mx-3 mb-4">
+        <div class="card-header">
+            <i class="fas fa-calendar me-2"></i>{{ month_name }} {{ year }} Calendar
+        </div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap">
+                {% for day in data.calendar_data %}
+                    <div class="p-2 border text-center" style="width: 14.28%; height: 90px;">
+                        <strong>{{ day.day }}</strong><br>
+                        {% if day.attendance %}
+                            <small class="badge bg-{% if day.attendance.status == 'present' %}success{% elif day.attendance.status == 'absent' %}danger{% else %}warning{% endif %}">
+                                {{ day.attendance.get_status_display }}
+                            </small><br>
+                            {% if day.attendance.overtime_hours %}
+                                <small class="text-warning">OT: {{ day.attendance.overtime_hours }}h</small>
+                            {% endif %}
+                        {% else %}
+                            <small class="text-muted">-</small>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Records -->
+    <div class="card mx-3 mb-4">
+        <div class="card-header">
+            <i class="fas fa-list me-2"></i>Detailed Attendance Records
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>In Time</th>
+                            <th>Out Time</th>
+                            <th>Total Hours</th>
+                            <th>Overtime</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for day_data in data.calendar_data %}
+                            {% if day_data.attendance %}
+                            <tr>
+                                <td>{{ day_data.date|date:"M d, Y" }}</td>
+                                <td>
+                                    <span class="badge bg-{% if day_data.attendance.status == 'present' %}success{% elif day_data.attendance.status == 'absent' %}danger{% else %}warning{% endif %}">
+                                        {{ day_data.attendance.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>{{ day_data.attendance.in_time|default:"-" }}</td>
+                                <td>{{ day_data.attendance.out_time|default:"-" }}</td>
+                                <td>
+                                    {% if day_data.attendance.total_hours %}
+                                        {{ day_data.attendance.total_hours|floatformat:1 }}h
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if day_data.attendance.overtime_hours %}
+                                        <span class="text-warning">{{ day_data.attendance.overtime_hours }}h</span>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>{{ day_data.attendance.notes|default:"-" }}</td>
+                            </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

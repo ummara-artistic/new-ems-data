@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Salary - {{ salary_record.employee.full_name }} - Labor Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-edit me-2"></i>Edit Salary Record</h1>
+    <a href="{% url 'salary:list' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to List
+    </a>
+</div>
+
+<!-- Employee Info -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h4>{{ salary_record.employee.full_name }}</h4>
+        <p class="text-muted mb-0">
+            <span class="badge bg-{% if salary_record.employee.employee_type == 'labor' %}success{% else %}primary{% endif %} me-2">
+                {{ salary_record.employee.get_employee_type_display }}
+            </span>
+            {{ month_name }} {{ salary_record.year }} Salary Record
+        </p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-edit me-2"></i>Edit Salary Details
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="basic_salary" class="form-label">Basic Salary (Rs.)</label>
+                            <input type="number" class="form-control" id="basic_salary" name="basic_salary" 
+                                   value="{{ salary_record.basic_salary }}" step="0.01" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="overtime_amount" class="form-label">Overtime Amount (Rs.)</label>
+                            <input type="number" class="form-control" id="overtime_amount" name="overtime_amount" 
+                                   value="{{ salary_record.overtime_amount }}" step="0.01">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="tea_allowance" class="form-label">Tea Allowance (Rs.)</label>
+                            <input type="number" class="form-control" id="tea_allowance" name="tea_allowance" 
+                                   value="{{ salary_record.tea_allowance }}" step="0.01">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="deductions" class="form-label">Deductions (Rs.)</label>
+                            <input type="number" class="form-control" id="deductions" name="deductions" 
+                                   value="{{ salary_record.deductions }}" step="0.01">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="dues" class="form-label">Dues (Rs.)</label>
+                            <input type="number" class="form-control" id="dues" name="dues" 
+                                   value="{{ salary_record.dues }}" step="0.01">
+                            <small class="text-muted">+ for owed to employee, - for owed by employee</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="2">{{ salary_record.notes }}</textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end">
+                        <a href="{% url 'salary:list' %}" class="btn btn-secondary me-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Update Salary
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <i class="fas fa-info-circle me-2"></i>Current Record
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Present Days:</span>
+                    <span class="badge bg-success">{{ salary_record.days_present }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Absent Days:</span>
+                    <span class="badge bg-danger">{{ salary_record.days_absent }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Overtime Hours:</span>
+                    <span class="text-warning">{{ salary_record.overtime_hours|floatformat:1 }}h</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <strong>Current Total:</strong>
+                    <strong class="text-primary">Rs. {{ salary_record.total_salary|floatformat:0 }}</strong>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header bg-success text-white">
+                <i class="fas fa-calculator me-2"></i>Live Calculation
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Basic Salary:</span>
+                    <span id="summary_basic">Rs. {{ salary_record.basic_salary|floatformat:0 }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Overtime:</span>
+                    <span id="summary_overtime" class="text-success">Rs. {{ salary_record.overtime_amount|floatformat:0 }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Tea Allowance:</span>
+                    <span id="summary_tea" class="text-info">Rs. {{ salary_record.tea_allowance|floatformat:0 }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Deductions:</span>
+                    <span id="summary_deductions" class="text-danger">Rs. {{ salary_record.deductions|floatformat:0 }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Dues:</span>
+                    <span id="summary_dues" class="text-warning">Rs. {{ salary_record.dues|floatformat:0 }}</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <strong>New Total:</strong>
+                    <strong id="summary_total" class="text-primary">Rs. {{ salary_record.total_salary|floatformat:0 }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateSummary() {
+    var basic = parseFloat(document.getElementById('basic_salary').value) || 0;
+    var overtime = parseFloat(document.getElementById('overtime_amount').value) || 0;
+    var tea = parseFloat(document.getElementById('tea_allowance').value) || 0;
+    var deductions = parseFloat(document.getElementById('deductions').value) || 0;
+    var dues = parseFloat(document.getElementById('dues').value) || 0;
+    
+    var total = basic + overtime + tea - deductions + dues;
+    
+    document.getElementById('summary_basic').textContent = 'Rs. ' + basic.toFixed(0);
+    document.getElementById('summary_overtime').textContent = 'Rs. ' + overtime.toFixed(0);
+    document.getElementById('summary_tea').textContent = 'Rs. ' + tea.toFixed(0);
+    document.getElementById('summary_deductions').textContent = 'Rs. ' + deductions.toFixed(0);
+    document.getElementById('summary_dues').textContent = 'Rs. ' + dues.toFixed(0);
+    document.getElementById('summary_total').textContent = 'Rs. ' + total.toFixed(0);
+}
+
+// Add event listeners to all input fields
+document.addEventListener('DOMContentLoaded', function() {
+    var inputs = ['basic_salary', 'overtime_amount', 'tea_allowance', 'deductions', 'dues'];
+    inputs.forEach(function(id) {
+        document.getElementById(id).addEventListener('input', updateSummary);
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+
+{% block title %}Generate Salary - {{ employee.full_name }} - Labor Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-calculator me-2"></i>Generate Salary</h1>
+    <a href="{% url 'salary:list' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to List
+    </a>
+</div>
+
+<!-- Employee Info -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8">
+                <h4>{{ employee.full_name }}</h4>
+                <p class="text-muted mb-0">
+                    <span class="badge bg-{% if employee.employee_type == 'labor' %}success{% else %}primary{% endif %} me-2">
+                        {{ employee.get_employee_type_display }}
+                    </span>
+                    {{ month_name }} {{ year }} Salary Calculation
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <h5>Monthly Salary: <span class="text-primary">Rs. {{ employee.salary|floatformat:0 }}</span></h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance Summary -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stats-card" style="background: linear-gradient(135deg, var(--success-color), #229954);">
+            <h3>{{ days_present }}</h3>
+            <p><i class="fas fa-check me-2"></i>Present Days</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card" style="background: linear-gradient(135deg, var(--danger-color), #c0392b);">
+            <h3>{{ days_absent }}</h3>
+            <p><i class="fas fa-times me-2"></i>Absent Days</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card" style="background: linear-gradient(135deg, var(--warning-color), #e67e22);">
+            <h3>{{ half_days }}</h3>
+            <p><i class="fas fa-clock me-2"></i>Half Days</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card" style="background: linear-gradient(135deg, var(--accent-color), #2980b9);">
+            <h3>{{ total_overtime|floatformat:1 }}</h3>
+            <p><i class="fas fa-plus-circle me-2"></i>Overtime Hours</p>
+        </div>
+    </div>
+</div>
+
+<!-- Salary Calculation Form -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-calculator me-2"></i>Salary Calculation
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="basic_salary" class="form-label">Basic Salary (Rs.)</label>
+                            <input type="number" class="form-control" id="basic_salary" name="basic_salary" 
+                                   value="{{ basic_salary|floatformat:2 }}" step="0.01" required>
+                            <small class="text-muted">Based on {{ days_present }} present days</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="overtime_amount" class="form-label">Overtime Amount (Rs.)</label>
+                            <input type="number" class="form-control" id="overtime_amount" name="overtime_amount" 
+                                   value="{{ overtime_amount|floatformat:2 }}" step="0.01">
+                            <small class="text-muted">{{ total_overtime|floatformat:1 }} hours @ 1.5x rate</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="tea_allowance" class="form-label">Tea Allowance (Rs.)</label>
+                            <input type="number" class="form-control" id="tea_allowance" name="tea_allowance" 
+                                   value="{{ tea_allowance }}" step="0.01">
+                            <small class="text-muted">Fixed monthly allowance</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="advance_taken" class="form-label">Advance Taken (Rs.)</label>
+                            <input type="number" class="form-control" id="advance_taken" name="advance_taken" 
+                                   value="0" step="0.01">
+                            <small class="text-muted">Salary advance given to employee</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="deductions" class="form-label">Other Deductions (Rs.)</label>
+                            <input type="number" class="form-control" id="deductions" name="deductions" 
+                                   value="{{ deductions|floatformat:2 }}" step="0.01">
+                            <small class="text-muted">Based on {{ days_absent }} absent days</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="dues" class="form-label">Dues (Rs.)</label>
+                            <input type="number" class="form-control" id="dues" name="dues" 
+                                   value="0" step="0.01">
+                            <small class="text-muted">Previous dues (+ for owed to employee, - for owed by employee)</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="2" 
+                                      placeholder="Optional notes..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end">
+                        <a href="{% url 'salary:list' %}" class="btn btn-secondary me-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Generate Salary
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <i class="fas fa-money-bill-wave me-2"></i>Salary Summary
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Basic Salary:</span>
+                    <span id="summary_basic">Rs. {{ basic_salary|floatformat:0 }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Overtime:</span>
+                    <span id="summary_overtime" class="text-success">Rs. {{ overtime_amount|floatformat:0 }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Tea Allowance:</span>
+                    <span id="summary_tea" class="text-info">Rs. {{ tea_allowance }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Advance Taken:</span>
+                    <span id="summary_advance" class="text-warning">Rs. 0</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Other Deductions:</span>
+                    <span id="summary_deductions" class="text-danger">Rs. {{ deductions|floatformat:0 }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Dues:</span>
+                    <span id="summary_dues" class="text-warning">Rs. 0</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <strong>Total Salary:</strong>
+                    <strong id="summary_total" class="text-primary">Rs. {{ total_salary|floatformat:0 }}</strong>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <i class="fas fa-info-circle me-2"></i>Calculation Details
+            </div>
+            <div class="card-body">
+                <small class="text-muted">
+                    <strong>Working Days:</strong> {{ working_days }} days<br>
+                    <strong>Total Days:</strong> {{ total_days }} days<br>
+                    <strong>Daily Rate:</strong> Rs. {{ daily_rate|floatformat:0 }}<br>
+                    <strong>Hourly Rate:</strong> Rs. {{ hourly_rate|floatformat:0 }}
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateSummary() {
+    var basic = parseFloat(document.getElementById('basic_salary').value) || 0;
+    var overtime = parseFloat(document.getElementById('overtime_amount').value) || 0;
+    var tea = parseFloat(document.getElementById('tea_allowance').value) || 0;
+    var advance = parseFloat(document.getElementById('advance_taken').value) || 0;
+    var deductions = parseFloat(document.getElementById('deductions').value) || 0;
+    var dues = parseFloat(document.getElementById('dues').value) || 0;
+    
+    var total = basic + overtime + tea - advance - deductions + dues;
+    
+    document.getElementById('summary_basic').textContent = 'Rs. ' + basic.toFixed(0);
+    document.getElementById('summary_overtime').textContent = 'Rs. ' + overtime.toFixed(0);
+    document.getElementById('summary_tea').textContent = 'Rs. ' + tea.toFixed(0);
+    document.getElementById('summary_advance').textContent = 'Rs. ' + advance.toFixed(0);
+    document.getElementById('summary_deductions').textContent = 'Rs. ' + deductions.toFixed(0);
+    document.getElementById('summary_dues').textContent = 'Rs. ' + dues.toFixed(0);
+    document.getElementById('summary_total').textContent = 'Rs. ' + total.toFixed(0);
+}
+
+// Add event listeners to all input fields
+document.addEventListener('DOMContentLoaded', function() {
+    var inputs = ['basic_salary', 'overtime_amount', 'tea_allowance', 'advance_taken', 'deductions', 'dues'];
+    inputs.forEach(function(id) {
+        document.getElementById(id).addEventListener('input', updateSummary);
+    });
+});
+</script>
+{% endblock %}
