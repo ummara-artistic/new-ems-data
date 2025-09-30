@@ -60,10 +60,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'labor_management.wsgi.application'
 
-# -------------------- PostgreSQL Database via Supabase --------------------
+# -------------------- PostgreSQL Database via Supabase Session Pooler (IPv4 compatible) --------------------
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql://postgres:Orchard12%40@db.bnftmbsvtqgjzzlfkecv.supabase.co:5432/postgres"
+    "postgresql://postgres:Orchard12%40@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
 )
 
 DATABASES = {
