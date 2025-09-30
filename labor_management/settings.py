@@ -1,11 +1,12 @@
 import os
 from pathlib import Path
+import dj_database_url  # Make sure dj-database-url is installed
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # -------------------- Secret & Debug --------------------
-SECRET_KEY = 'django-insecure-dev-key'
-DEBUG = True
+SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-dev-key")
+DEBUG = os.environ.get("DEBUG", "True") == "True"
 
 ALLOWED_HOSTS = [
     'localhost',
@@ -59,12 +60,16 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'labor_management.wsgi.application'
 
-# -------------------- SQLite Database --------------------
+# -------------------- PostgreSQL Database via Supabase --------------------
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get(
+            "DATABASE_URL",
+            "postgresql://postgres:[YOUR-PASSWORD]@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+        ),
+        conn_max_age=600,
+        ssl_require=True
+    )
 }
 
 # -------------------- Password Validators --------------------
