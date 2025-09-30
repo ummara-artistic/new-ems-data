@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import dj_database_url  # pip install dj-database-url psycopg2-binary
 from urllib.parse import quote_plus
+import socket
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -57,18 +58,21 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'labor_management.wsgi.application'
 
-# ---------------- Supabase Postgres Database ----------------
-# URL-encode the password for safety
+# ---------------- Supabase Postgres Database (Vercel-ready) ----------------
+# URL-encode your password
 DB_PASSWORD = quote_plus('orchard12@')
 
-# Build full DATABASE_URL
-DATABASE_URL = f"postgresql://postgres:{DB_PASSWORD}@db.agtzxtiqsieldeqwvilh.supabase.co:5432/postgres?sslmode=require"
+# Use the IPv4 address of your Supabase host
+SUPABASE_HOST_IPV4 = socket.gethostbyname('db.agtzxtiqsieldeqwvilh.supabase.co')
 
-# Use dj_database_url to parse the URL
+# Build the DATABASE_URL with IPv4 and SSL
+DATABASE_URL = f"postgresql://postgres:{DB_PASSWORD}@{SUPABASE_HOST_IPV4}:5432/postgres?sslmode=require"
+
+# Parse with dj-database-url
 DATABASES = {
     "default": dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=True)
 }
-# ------------------------------------------------------------
+# -------------------------------------------------------------------------
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator', },
