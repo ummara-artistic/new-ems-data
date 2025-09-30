@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-import psycopg2  # PostgreSQL adapter
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -14,9 +13,8 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     'ems-2171-girkc0pco-yasirkhan-ams-projects.vercel.app',
-    'new-ems-data.vercel.app',  # add this
+    'new-ems-data.vercel.app',
 ]
-
 
 # -------------------- Installed Apps --------------------
 INSTALLED_APPS = [
@@ -34,7 +32,7 @@ INSTALLED_APPS = [
 # -------------------- Middleware --------------------
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # For static files in production
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -68,17 +66,16 @@ WSGI_APPLICATION = 'labor_management.wsgi.application'
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "postgres",  # database name
-        "USER": "postgres.bnftmbsvtqgjzzlfkecv",  # pooler user
-        "PASSWORD": "Orchardflower123@",  # your password
-        "HOST": "aws-1-ap-southeast-1.pooler.supabase.com",  # pooler host
-        "PORT": "5432",
+        "NAME": os.environ.get("SUPABASE_DB_NAME", "postgres"),
+        "USER": os.environ.get("SUPABASE_DB_USER", "postgres.bnftmbsvtqgjzzlfkecv"),
+        "PASSWORD": os.environ.get("SUPABASE_DB_PASSWORD", "Orchardflower123@"),
+        "HOST": os.environ.get("SUPABASE_DB_HOST", "aws-1-ap-southeast-1.pooler.supabase.com"),
+        "PORT": os.environ.get("SUPABASE_DB_PORT", "6543"),  # Transaction Pooler port
         "OPTIONS": {
             "sslmode": "require",  # enforce SSL
         },
     }
 }
-
 
 # -------------------- Password validation --------------------
 AUTH_PASSWORD_VALIDATORS = [
