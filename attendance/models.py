@@ -1,6 +1,7 @@
 from django.db import models
 from employees.models import Employee
 from django.core.validators import MinValueValidator
+from datetime import datetime, timedelta
 
 class Attendance(models.Model):
     STATUS_CHOICES = [
@@ -14,11 +15,12 @@ class Attendance(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='present')
     in_time = models.TimeField(null=True, blank=True)
     out_time = models.TimeField(null=True, blank=True)
-    overtime_hours = models.DecimalField(max_digits=4, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+    overtime_hours = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0
+    )  # Removed MinValueValidator to allow negative values
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    # <-- Add this if you want to track late minutes
     late_minutes = models.FloatField(default=0)  # in minutes
     
     class Meta:
@@ -30,17 +32,26 @@ class Attendance(models.Model):
     
     @property
     def total_hours(self):
+        """Calculate worked hours after deducting lunch and excluding Sundays."""
         if self.in_time and self.out_time:
-            from datetime import datetime, timedelta
             in_datetime = datetime.combine(self.date, self.in_time)
             out_datetime = datetime.combine(self.date, self.out_time)
-            
+
             # Handle overnight shifts
             if out_datetime < in_datetime:
                 out_datetime += timedelta(days=1)
             
-            total_time = out_datetime - in_datetime
-            return total_time.total_seconds() / 3600  # Convert to hours
+            total_hours = (out_datetime - in_datetime).total_seconds() / 3600
+
+            # Deduct lunch hours
+            if self.date.weekday() == 6:  # Sunday (0=Monday, 6=Sunday)
+                return 0
+            elif self.date.weekday() == 4:  # Friday
+                total_hours -= 1
+            else:
+                total_hours -= 0.5
+
+            return round(total_hours, 2) if total_hours > 0 else 0
         return 0
 
 
@@ -57,4 +68,4 @@ class EmployeeAllowance(models.Model):
     daily_allowance = models.DecimalField(max_digits=8, decimal_places=2, default=0)  # per day
 
     def __str__(self):
-        return f"{self.employee.name} - {self.daily_allowance}"
+        return f"{self.employee.full_name} - {self.daily_allowance}"
