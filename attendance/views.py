@@ -275,26 +275,39 @@ import csv
 from employees.models import Employee
 from attendance.models import Attendance, Allowance, Loan, FestivalDeduction
 
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from datetime import datetime
 from calendar import monthrange
-from decimal import Decimal
-from django.http import HttpResponse
+from datetime import datetime, timedelta
+from decimal import Decimal, ROUND_HALF_UP
 import csv
+
+from django.shortcuts import get_object_or_404, render
+from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
 
 from employees.models import Employee
-from attendance.models import Attendance, Loan, FestivalDeduction, Allowance
-
-from decimal import Decimal
-from calendar import monthrange
-from datetime import datetime
-import csv
-from django.shortcuts import render, get_object_or_404
-from django.http import HttpResponse
-from django.contrib.auth.decorators import login_required
 from attendance.models import Attendance, Allowance, Loan, FestivalDeduction
+
+
+from decimal import Decimal, ROUND_HALF_UP
+from calendar import monthrange
+from datetime import datetime, timedelta
+from django.shortcuts import get_object_or_404, render
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
+import csv
 from employees.models import Employee
+from attendance.models import Attendance, Loan, Allowance, FestivalDeduction
+
+from django.shortcuts import get_object_or_404, render
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
+from datetime import datetime, timedelta
+from calendar import monthrange
+from decimal import Decimal, ROUND_HALF_UP
+import csv
+
+from employees.models import Employee
+from attendance.models import Attendance, Allowance, Loan, FestivalDeduction
 
 @login_required
 def monthly_report(request, employee_id, year=None, month=None):
@@ -306,7 +319,7 @@ def monthly_report(request, employee_id, year=None, month=None):
     month = int(request.GET.get('month', month if month else today.month))
     days_in_month = monthrange(year, month)[1]
 
-    # --- Handle POST updates ---
+    # Handle POST updates for loan, allowance, festival deduction
     if request.method == 'POST':
         loan_val = request.POST.get('loan_deduction')
         festival_val = request.POST.get('festival_deduction')
@@ -328,22 +341,23 @@ def monthly_report(request, employee_id, year=None, month=None):
                 defaults={'amount': Decimal(allowance_val)}
             )
 
-    # --- Salary & Attendance Calculations ---
+    # Salary setup
     monthly_salary = Decimal(employee.salary)
-    per_day_wage = monthly_salary / Decimal(days_in_month)  # divide by all days including Sundays
-    per_hour_wage = per_day_wage / Decimal('7.5')  # standard 7.5 hrs/day
+    per_day_wage = (monthly_salary / Decimal('30')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    per_hour_wage = (per_day_wage / Decimal('8')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-    # Attendance fetch
+    # Attendance records
     attendance_records = Attendance.objects.filter(
         employee=employee, date__year=year, date__month=month
     ).order_by('date')
     attendance_dict = {record.date.day: record for record in attendance_records}
 
-    # Totals
-    total_allowance_amount = sum(a.amount for a in Allowance.objects.filter(employee=employee, month=month, year=year))
-    total_loan_amount = sum(l.amount for l in Loan.objects.filter(employee=employee, month=month, year=year))
-    total_festival_amount = sum(f.deduction_amount for f in FestivalDeduction.objects.filter(employee=employee, month=month, year=year))
+    # Totals for deductions and allowances
+    total_allowance_amount = sum([Decimal(a.amount) for a in Allowance.objects.filter(employee=employee, month=month, year=year)])
+    total_loan_amount = sum([Decimal(l.amount) for l in Loan.objects.filter(employee=employee, month=month, year=year)])
+    total_festival_amount = sum([Decimal(f.deduction_amount) for f in FestivalDeduction.objects.filter(employee=employee, month=month, year=year)])
 
+    # Initialize counters
     calendar_data = []
     total_present = total_absent = total_half_day = total_late_days = 0
     total_overtime_hours = total_worked_hours = Decimal('0.0')
@@ -360,79 +374,77 @@ def monthly_report(request, employee_id, year=None, month=None):
         # Shift timings
         shift_start = datetime.combine(date_obj, datetime.strptime("09:00", "%H:%M").time())
         shift_end = datetime.combine(date_obj, datetime.strptime("17:30", "%H:%M").time())
+        lunch_break = timedelta(minutes=30)
         if date_obj.weekday() == 4:  # Friday
             shift_end = datetime.combine(date_obj, datetime.strptime("17:00", "%H:%M").time())
+            lunch_break = timedelta(hours=1)
 
-        lunch_break = Decimal('0.5') if date_obj.weekday() != 4 else Decimal('1.0')
+        day_earned = Decimal('0.0')  # Default if not present
 
-        if not is_sunday:
-            if attendance and attendance.status == 'present':
-                total_present += 1
-                if attendance.in_time and attendance.out_time:
-                    actual_in = datetime.combine(date_obj, attendance.in_time)
-                    actual_out = datetime.combine(date_obj, attendance.out_time)
+        if attendance and attendance.status == 'present':
+            total_present += 1
+            if attendance.in_time and attendance.out_time:
+                actual_in = datetime.combine(date_obj, attendance.in_time)
+                actual_out = datetime.combine(date_obj, attendance.out_time)
 
-                    worked_delta = actual_out - actual_in
-                    worked_hours = Decimal(worked_delta.total_seconds()) / Decimal('3600') - lunch_break
-                    if worked_hours < 0:
-                        worked_hours = Decimal('0.0')
+                worked_delta = actual_out - actual_in - lunch_break
+                worked_hours = Decimal(worked_delta.total_seconds() / 3600).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-                    # Overtime
-                    if actual_out > shift_end:
-                        extra_time = actual_out - shift_end
-                        overtime_hours = Decimal(extra_time.total_seconds()) / Decimal('3600')
+                # Overtime
+                if actual_out > shift_end:
+                    extra_time = actual_out - shift_end
+                    overtime_hours = Decimal(extra_time.total_seconds() / 3600).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-                    # Late handling
-                    late_threshold = datetime.combine(date_obj, datetime.strptime("09:15", "%H:%M").time())
-                    if actual_in > late_threshold:
-                        is_late = True
-                        late_minutes = (actual_in - shift_start).seconds // 60
-                        total_late_days += 1
-                        late_hours = Decimal(late_minutes) / Decimal('60')
-                        if overtime_hours >= late_hours:
-                            overtime_hours -= late_hours
-                        else:
-                            salary_deduction += (late_hours - overtime_hours) * per_hour_wage
-                            overtime_hours = Decimal('0.0')
+                # Late handling
+                late_threshold = datetime.combine(date_obj, datetime.strptime("09:15", "%H:%M").time())
+                if actual_in > late_threshold:
+                    is_late = True
+                    late_minutes = (actual_in - shift_start).seconds // 60
+                    total_late_days += 1
+                    late_hours = Decimal(late_minutes) / Decimal('60')
+                    if overtime_hours >= late_hours:
+                        overtime_hours -= late_hours
+                    else:
+                        salary_deduction += (late_hours - overtime_hours) * per_hour_wage
+                        overtime_hours = Decimal('0.0')
 
-                        if late_minutes >= 60:
-                            half_day_deduction = per_day_wage / 2
-                            salary_deduction += half_day_deduction
-                            total_half_day += 1
+                    if late_minutes >= 60:
+                        half_day_deduction = per_day_wage / 2
+                        salary_deduction += half_day_deduction
+                        total_half_day += 1
 
-                    total_overtime_hours += overtime_hours
-                    total_worked_hours += worked_hours
-            else:
-                total_absent += 1
+            total_overtime_hours += overtime_hours
+            total_worked_hours += worked_hours
 
-        # Prepare calendar row
-        total_earned_day = per_day_wage + (overtime_hours * per_hour_wage) - salary_deduction
+            # Earned salary for this day
+            day_earned = (per_day_wage * (worked_hours / Decimal('8')) + overtime_hours * per_hour_wage - salary_deduction).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        else:
+            total_absent += 1
+
         calendar_data.append({
             'day': day,
             'date': date_obj,
             'attendance': attendance,
             'is_late': is_late,
             'late_minutes': late_minutes,
-            'worked_hours': float(round(worked_hours, 2)),
-            'overtime_hours': float(round(overtime_hours, 2)),
+            'worked_hours': float(worked_hours),
+            'overtime_hours': float(overtime_hours),
             'half_day_deduction': float(half_day_deduction),
             'salary_deduction': float(salary_deduction),
-            'total_earned': float(total_earned_day if not is_sunday else per_day_wage),
+            'total_earned': float(day_earned),
             'is_holiday': is_sunday,
         })
 
-    # Add attendance allowance if perfect attendance
-    if total_present == (days_in_month - len([d for d in range(1, days_in_month+1) if datetime(year, month, d).weekday() == 6])) \
-       and getattr(employee, 'attendance_allowance', 0):
+    # Attendance allowance if perfect attendance
+    if total_present == len([d for d in calendar_data if d['attendance'] and d['attendance'].status == 'present']) and getattr(employee, 'attendance_allowance', 0):
         total_allowance_amount += employee.attendance_allowance
 
-    # Salary summaries
-    earned_salary_amount = float(per_day_wage * days_in_month)  # include Sundays
-    overtime_amount = float(total_overtime_hours * per_hour_wage)
-    deductions_amount = float(total_loan_amount + total_festival_amount)
-    final_salary_amount = earned_salary_amount + overtime_amount + float(total_allowance_amount) - deductions_amount
+    # Final salary calculation
+    earned_salary_amount = sum([Decimal(d['total_earned']) for d in calendar_data])
+    deductions_amount = total_loan_amount + total_festival_amount
+    final_salary_amount = (earned_salary_amount + total_allowance_amount - deductions_amount).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-    # --- CSV Export ---
+    # CSV Export
     if 'export' in request.GET:
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = f'attachment; filename="{employee.full_name}_report_{month}_{year}.csv"'
@@ -471,18 +483,17 @@ def monthly_report(request, employee_id, year=None, month=None):
         'total_absent': total_absent,
         'total_half_day': total_half_day,
         'total_late_days': total_late_days,
-        'total_worked_hours': float(round(total_worked_hours, 2)),
-        'total_overtime_hours': float(round(total_overtime_hours, 2)),
+        'total_worked_hours': float(total_worked_hours),
+        'total_overtime_hours': float(total_overtime_hours),
         'per_day_wage': float(per_day_wage),
         'per_hour_wage': float(per_hour_wage),
         'total_allowance': float(total_allowance_amount),
         'total_loan_deduction': float(total_loan_amount),
         'total_festival_deduction': float(total_festival_amount),
-        'earned_salary_amount': earned_salary_amount,
-        'overtime_amount': overtime_amount,
-        'deductions_amount': deductions_amount,
-        'final_salary_amount': final_salary_amount,
-        'total_salary': final_salary_amount,
+        'earned_salary_amount': float(earned_salary_amount),
+        'deductions_amount': float(deductions_amount),
+        'final_salary_amount': float(final_salary_amount),
+        'total_salary': float(final_salary_amount),
         'prev_year': prev_year,
         'prev_month': prev_month,
         'next_year': next_year,
@@ -490,6 +501,7 @@ def monthly_report(request, employee_id, year=None, month=None):
     }
 
     return render(request, 'attendance/monthly_report.html', context)
+
 
 
 
@@ -549,19 +561,6 @@ from docx.shared import Pt, Inches
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-
-from django.shortcuts import get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
-from datetime import datetime
-from calendar import monthrange
-from decimal import Decimal
-import os, io
-from docx import Document
-from docx.shared import Pt, Inches
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
 
 from .models import Employee, Attendance, Allowance, Loan, FestivalDeduction
 
@@ -648,7 +647,7 @@ class SalarySlipDOCX:
             [
                 ("Present Days", "حاضر دن", s['total_present']),
                 ("Absent Days", "غیر حاضر دن", s['total_absent']),
-                ("Overtime Hours", "اضافی گھنٹے", round(s['total_overtime_hours'], 2)),
+                ("Overtime Hours", "اضافی گھنٹے", round(s['total_overtime_hours'],2)),
             ]
         )
 
@@ -656,17 +655,17 @@ class SalarySlipDOCX:
         add_section(
             "Salary Breakdown", "تنخواہ کی تفصیل",
             [
-                ("Basic Salary", "تنخواہ", f"Rs. {s['earned_salary_amount']:,.2f}"),
-                ("Overtime", "اوور ٹائم", f"Rs. {s['overtime_amount']:,.2f}"),
-                ("Allowance", "الاؤنس", f"Rs. {s['total_allowance']:,.2f}"),
-                ("Loan Deduction", "قرض", f"Rs. {s['total_loan_deduction']:,.2f}"),
-                ("Festival Deduction", "فیسٹیول کٹوتی", f"Rs. {s['total_festival_deduction']:,.2f}"),
-                ("Final Salary", "حتمی تنخواہ", f"Rs. {s['final_salary_amount']:,.2f}"),
+                ("Basic Salary", "تنخواہ", f"Rs. {s['earned_salary_amount']:,.0f}"),
+                ("Overtime", "اوور ٹائم", f"Rs. {s['overtime_amount']:,.0f}"),
+                ("Allowance", "الاؤنس", f"Rs. {s['total_allowance']:,.0f}"),  # Correctly includes attendance bonus
+                ("Loan Deduction", "قرض", f"Rs. {s['total_loan_deduction']:,.0f}"),
+                ("Festival Deduction", "فیسٹیول کٹوتی", f"Rs. {s['total_festival_deduction']:,.0f}"),
+                ("Final Salary", "حتمی تنخواہ", f"Rs. {s['final_salary_amount']:,.0f}"),
             ]
         )
 
         # Total Salary Heading
-        doc.add_heading(f"TOTAL SALARY / کل تنخواہ: Rs. {s['total_salary']:,.2f}", 1)
+        doc.add_heading(f"TOTAL SALARY / کل تنخواہ: Rs. {s['total_salary']:,.0f}", 1)
         doc.add_paragraph(f"Generated on: {datetime.now():%d/%m/%Y %H:%M}")
         doc.add_paragraph(f"تاریخ: {datetime.now():%d/%m/%Y %H:%M}")
 
@@ -674,6 +673,7 @@ class SalarySlipDOCX:
         doc.save(docx_io)
         docx_io.seek(0)
         return docx_io.read()
+
 
 # -------------------------------
 # Monthly Report DOCX View
@@ -687,23 +687,28 @@ def generate_monthly_salary_docx(request, employee_id, year=None, month=None):
     month = int(request.GET.get('month', month if month else today.month))
     days_in_month = monthrange(year, month)[1]
 
+    # Salary calculations
     monthly_salary = Decimal(employee.salary)
-    per_day_wage = monthly_salary / Decimal(days_in_month)  # include all days in month
-    per_hour_wage = per_day_wage / Decimal('8')  # standard 8h per day excluding lunch
+    working_days = [d for d in range(1, days_in_month+1) if datetime(year, month, d).weekday() != 6]
+    total_working_days = len(working_days)
+    per_day_wage = monthly_salary / Decimal(total_working_days)
+    per_hour_wage = per_day_wage / Decimal('7.5')
 
     # Attendance records
     attendance_records = Attendance.objects.filter(
-        employee=employee, date__year=year, date__month=month
+        employee=employee,
+        date__year=year,
+        date__month=month
     ).order_by('date')
-    attendance_dict = {rec.date.day: rec for rec in attendance_records}
+    attendance_dict = {record.date.day: record for record in attendance_records}
 
-    # Allowances, Loans, Festival
-    total_allowance_amount = sum(a.amount for a in Allowance.objects.filter(employee=employee, month=month, year=year))
-    total_loan_amount = sum(l.amount for l in Loan.objects.filter(employee=employee, month=month, year=year))
-    total_festival_amount = sum(f.deduction_amount for f in FestivalDeduction.objects.filter(employee=employee, month=month, year=year))
+    # Allowances, loans, festival deductions
+    total_allowance_amount = sum([a.amount for a in Allowance.objects.filter(employee=employee, month=month, year=year)])
+    total_loan_amount = sum([l.amount for l in Loan.objects.filter(employee=employee, month=month, year=year)])
+    total_festival_amount = sum([f.deduction_amount for f in FestivalDeduction.objects.filter(employee=employee, month=month, year=year)])
 
     # Initialize totals
-    total_present = total_absent = 0
+    total_present = total_absent = total_half_day = total_late_days = 0
     total_overtime_hours = Decimal('0.0')
     total_worked_hours = Decimal('0.0')
 
@@ -712,30 +717,34 @@ def generate_monthly_salary_docx(request, employee_id, year=None, month=None):
         attendance = attendance_dict.get(day)
         is_sunday = date_obj.weekday() == 6
 
-        # Set shift hours (exclude lunch)
-        shift_hours = Decimal('8.0') if date_obj.weekday() != 4 else Decimal('7.0')  # Friday 1h lunch, others 0.5h
-        if attendance and attendance.status == 'present' and attendance.in_time and attendance.out_time:
-            total_present += 1
-            actual_in = datetime.combine(date_obj, attendance.in_time)
-            actual_out = datetime.combine(date_obj, attendance.out_time)
-            worked_hours = Decimal((actual_out - actual_in).total_seconds()) / Decimal('3600') - (Decimal('0.5') if date_obj.weekday() != 4 else Decimal('1.0'))
-            overtime_hours = max(Decimal('0.0'), worked_hours - shift_hours)
-            total_overtime_hours += overtime_hours
-            total_worked_hours += worked_hours
-        else:
-            total_absent += 1
+        if not is_sunday:
+            if attendance and attendance.status=='present' and attendance.in_time and attendance.out_time:
+                total_present +=1
+                actual_in = datetime.combine(date_obj, attendance.in_time)
+                actual_out = datetime.combine(date_obj, attendance.out_time)
+                worked_hours = Decimal((actual_out - actual_in).total_seconds())/Decimal('3600')
+                overtime_hours = Decimal('0.0')
+                shift_end = datetime.combine(date_obj, datetime.strptime("17:30", "%H:%M").time())
+                if date_obj.weekday() == 4: shift_end = datetime.combine(date_obj, datetime.strptime("17:00", "%H:%M").time())
+                if actual_out>shift_end:
+                    overtime_hours = Decimal((actual_out-shift_end).total_seconds())/Decimal('3600')
+                total_overtime_hours += overtime_hours
+                total_worked_hours += worked_hours
+            else:
+                total_absent +=1
 
-    # Attendance allowance
-    if total_present == days_in_month and getattr(employee, 'attendance_allowance', 0):
+    # Full attendance bonus
+    if total_present == total_working_days and getattr(employee, 'attendance_allowance', 0):
         total_allowance_amount += employee.attendance_allowance
 
-    # Salary calculations
+    # Salary component calculations
     earned_salary_amount = float(per_day_wage * total_present)
     overtime_amount = float(total_overtime_hours * per_hour_wage)
     deductions_amount = float(total_loan_amount + total_festival_amount)
     final_salary_amount = earned_salary_amount + overtime_amount + float(total_allowance_amount) - deductions_amount
     total_salary = final_salary_amount
 
+    # Prepare data dict for DOCX (allowance includes attendance bonus)
     salary_data = {
         'employee': employee,
         'year': year,
@@ -752,7 +761,8 @@ def generate_monthly_salary_docx(request, employee_id, year=None, month=None):
         'total_salary': total_salary,
     }
 
-    logo_path = os.path.join('static', 'images', 'logo.png')
+    # Generate DOCX
+    logo_path = os.path.join('static', 'images', 'logo.png')  # adjust path if needed
     docx_bytes = SalarySlipDOCX(salary_data, logo_path=logo_path).generate_docx_bytes()
 
     response = HttpResponse(
@@ -761,6 +771,8 @@ def generate_monthly_salary_docx(request, employee_id, year=None, month=None):
     )
     response['Content-Disposition'] = f'attachment; filename="{employee.full_name}_salary_{month}_{year}.docx"'
     return response
+
+
 
 
 
