@@ -203,9 +203,7 @@
                         <a class="nav-link {% if 'attendance' in request.resolver_match.namespace %}active{% endif %}" href="{% url 'attendance:list' %}">
                             <i class="fas fa-calendar-check me-2"></i>Attendance
                         </a>
-                        <a class="nav-link {% if 'salary' in request.resolver_match.namespace %}active{% endif %}" href="{% url 'salary:list' %}">
-                            <i class="fas fa-money-bill-wave me-2"></i>Salary
-                        </a>
+                        
                     </nav>
                 </div>
                 <div class="col-md-10 main-content">
