@@ -10,4 +10,8 @@ urlpatterns = [
     path('delete/<int:pk>/', views.delete_attendance, name='delete'),
     path('monthly/<int:employee_id>/', views.monthly_report, name='monthly_report'),
     path('monthly/<int:employee_id>/<int:year>/<int:month>/', views.monthly_report, name='monthly_report_detailed'),
+    path('salary-slip/<int:employee_id>/', views.generate_monthly_salary_docx, name='salary_slip_docx'),
+    path('monthly-report/<int:year>/<int:month>/', views.monthly_report_all, name='monthly_report_all'),
+
+
 ]
