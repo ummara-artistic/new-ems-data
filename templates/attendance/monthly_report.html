@@ -10,12 +10,12 @@
     </a>
 </div>
 
-<!-- Employee Info -->
-<div class="card mb-4 shadow-sm">
-    <div class="card-body">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h4 class="mb-1">{{ employee.full_name }}</h4>
+<!-- Employee Name (Full Width) -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm p-3">
+            <div class="card-body text-center">
+                <h3 class="mb-1">{{ employee.full_name }}</h3>
                 <p class="text-muted mb-0">
                     <span class="badge bg-{% if employee.employee_type == 'labor' %}success{% else %}primary{% endif %} me-2">
                         {{ employee.get_employee_type_display }}
@@ -23,70 +23,132 @@
                     {{ month_name }} {{ year }} Report
                 </p>
             </div>
-            <div class="col-md-4 text-end">
-                <div class="btn-group">
-                    <a href="{% url 'attendance:monthly_report_detailed' employee.id prev_year prev_month %}" 
-                       class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-chevron-left"></i> Previous
-                    </a>
-                    <a href="{% url 'attendance:monthly_report_detailed' employee.id next_year next_month %}" 
-                       class="btn btn-outline-primary btn-sm">
-                        Next <i class="fas fa-chevron-right"></i>
-                    </a>
-                </div>
-            </div>
         </div>
     </div>
 </div>
 
-<!-- Statistics -->
-<div class="row mb-4 g-3">
-    <div class="col-md-2">
-        <div class="stats-card bg-success text-white p-3 rounded shadow-sm text-center">
-            <h3>{{ total_present }}</h3>
-            <p class="mb-0">Present</p>
+<!-- Salary Cards Row -->
+<form method="POST" class="row mb-4 g-3">
+    {% csrf_token %}
+    <!-- Base Salary -->
+    <div class="col-md-3">
+        <div class="stats-card bg-secondary text-white p-3 rounded shadow-sm text-center">
+            <h5>Base Salary</h5>
+            <p>{{ employee.salary|default:0|floatformat:0 }} PKR</p>
         </div>
     </div>
-    <div class="col-md-2">
+
+    <!-- Loan Dues -->
+    <div class="col-md-3">
         <div class="stats-card bg-danger text-white p-3 rounded shadow-sm text-center">
-            <h3>{{ total_absent }}</h3>
-            <p class="mb-0">Absent</p>
+            <h5>Loan Dues</h5>
+            <input type="number" name="loan_deduction" class="form-control form-control-sm" 
+                   value="{{ total_loan_deduction|default:0 }}">
+            <small class="d-block text-light mt-1">(Update or add new loan amount)</small>
         </div>
     </div>
-    <div class="col-md-2">
-        <div class="stats-card bg-warning text-white p-3 rounded shadow-sm text-center">
-            <h3>{{ total_half_day }}</h3>
-            <p class="mb-0">Half Days</p>
-        </div>
-    </div>
-    <div class="col-md-2">
+
+    <!-- Earned Salary -->
+    <div class="col-md-3">
         <div class="stats-card bg-primary text-white p-3 rounded shadow-sm text-center">
-            <h3>{{ total_overtime|floatformat:1 }}</h3>
-            <p class="mb-0">Overtime Hours</p>
+            <h5>Earned Salary</h5>
+            <p>
+                {{ earned_salary_amount|floatformat:0 }} PKR
+                <small class="d-block text-muted">
+                    ({{ total_present }} days × {{ per_day_wage|floatformat:2 }} PKR)
+                </small>
+            </p>
         </div>
     </div>
-    <div class="col-md-2">
+
+    <!-- Overtime Pay -->
+    <div class="col-md-3">
+        <div class="stats-card bg-warning text-dark p-3 rounded shadow-sm text-center">
+            <h5>Overtime Pay</h5>
+            <p>
+                {{ overtime_amount|floatformat:0 }} PKR
+                <small class="d-block text-muted">
+                    ({{ total_overtime_hours|floatformat:2 }} h × {{ per_hour_wage|floatformat:2 }} PKR)
+                </small>
+            </p>
+        </div>
+    </div>
+
+    <!-- Deductions -->
+    <div class="col-md-3">
         <div class="stats-card bg-danger text-white p-3 rounded shadow-sm text-center">
-            <h3>{{ total_late_days }}</h3>
-            <p class="mb-0">Late Days</p>
+            <h5>Deductions</h5>
+            <p>
+                {{ deductions_amount|floatformat:0 }} PKR
+                <small class="d-block text-muted">
+                    (Loans + Festival + Late/Half-day)
+                </small>
+            </p>
         </div>
     </div>
-    <div class="col-md-2">
-        <div class="stats-card bg-info text-white p-3 rounded shadow-sm text-center">
-            <h3>{{ total_worked_hours|floatformat:1 }}</h3>
-            <p class="mb-0">Worked Hours</p>
+
+    <!-- Festival Deduction -->
+    <div class="col-md-3">
+        <div class="stats-card bg-warning text-dark p-3 rounded shadow-sm text-center">
+            <h5>Festival Deduction</h5>
+            <input type="number" name="festival_deduction" class="form-control form-control-sm" 
+                   value="{{ total_festival_deduction|default:0 }}">
         </div>
+    </div>
+
+    <!-- Allowance -->
+    <div class="col-md-3">
+        <div class="stats-card bg-info text-white p-3 rounded shadow-sm text-center">
+            <h5>Allowance</h5>
+            <input type="number" name="allowance" class="form-control form-control-sm" 
+                   value="{{ total_allowance|default:0 }}">
+        </div>
+    </div>
+
+    <!-- Final Salary -->
+    <div class="col-md-3">
+        <div class="stats-card bg-success text-white p-3 rounded shadow-sm text-center">
+            <h5>Final Salary</h5>
+            <p>{{ final_salary_amount|floatformat:0 }} PKR</p>
+        </div>
+    </div>
+
+    <!-- Buttons in one line -->
+    <div class="col-6">
+        <button type="submit" class="btn btn-primary btn-lg w-100">Update Salary</button>
+    </div>
+    <div class="col-6">
+        <a href="{% url 'attendance:salary_slip_docx' employee.id %}?month={{ month }}&year={{ year }}" 
+           class="btn btn-success btn-lg w-100 text-center d-block">
+            Generate Salary Slip
+        </a>
+    </div>
+</form>
+
+
+
+
+<!-- Navigation -->
+<div class="d-flex justify-content-end mb-3">
+    <div class="btn-group">
+        <a href="{% url 'attendance:monthly_report_detailed' employee.id prev_year prev_month %}" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-chevron-left"></i> Previous
+        </a>
+        <a href="{% url 'attendance:monthly_report_detailed' employee.id next_year next_month %}" class="btn btn-outline-primary btn-sm">
+            Next <i class="fas fa-chevron-right"></i>
+        </a>
+        <a href="?export=1" class="btn btn-success btn-sm"><i class="fas fa-file-csv"></i> Export CSV</a>
     </div>
 </div>
 
 <!-- Calendar View -->
-<div class="card shadow-sm">
-    <div class="card-header">
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
         <i class="fas fa-calendar me-2"></i>{{ month_name }} {{ year }} Calendar
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-bordered text-center align-middle">
+            <table class="table table-bordered text-center align-middle mb-0">
                 <thead>
                     <tr class="table-light">
                         <th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th>
@@ -96,26 +158,25 @@
                 <tbody>
                     {% for day_data in calendar_data %}
                         {% if forloop.first or forloop.counter0|divisibleby:7 %}<tr>{% endif %}
-                        <td style="height: 90px;" 
-                            class="{% if day_data.is_today %}border border-primary rounded{% endif %} 
-                                   {% if day_data.is_late %}late-day{% endif %} 
+                        <td style="height: 90px; vertical-align:top;"
+                            class="{% if day_data.is_late %}late-day{% endif %}
+                                   {% if day_data.attendance and day_data.attendance.status == 'half_day' %}half-day{% endif %}
                                    {% if day_data.is_holiday %}bg-light text-muted{% endif %}">
                             <strong>{{ day_data.day }}</strong>
                             <div class="small mt-1">
                                 {% if day_data.attendance %}
                                     <span class="badge bg-{% if day_data.attendance.status == 'present' %}success
-                                                        {% elif day_data.attendance.status == 'absent' %}danger
-                                                        {% else %}warning{% endif %}">
+                                                                {% elif day_data.attendance.status == 'absent' %}danger
+                                                                {% else %}warning{% endif %}">
                                         {{ day_data.attendance.get_status_display }}
                                     </span>
-                                    {% if day_data.worked_hours %}
-                                        <div class="text-success">WH: {{ day_data.worked_hours }}h</div>
-                                    {% endif %}
-                                    {% if day_data.attendance.overtime_hours %}
-                                        <div class="text-warning">OT: {{ day_data.attendance.overtime_hours }}h</div>
-                                    {% endif %}
+                                    <div class="text-success">WH: {{ day_data.worked_hours }}h</div>
+                                    <div class="text-warning">OT: {{ day_data.overtime_hours }}h</div>
                                     {% if day_data.is_late %}
                                         <div class="text-danger">Late {{ day_data.late_minutes }} min</div>
+                                    {% endif %}
+                                    {% if day_data.attendance.status == 'half_day' %}
+                                        <div class="text-warning">Half Day Deduction</div>
                                     {% endif %}
                                 {% elif day_data.is_holiday %}
                                     <span>Holiday</span>
@@ -132,14 +193,14 @@
     </div>
 </div>
 
-<!-- Detailed Records -->
-<div class="card mt-4 shadow-sm">
-    <div class="card-header">
+<!-- Detailed Records Table -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
         <i class="fas fa-list me-2"></i> Detailed Attendance Records
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover text-center">
+            <table class="table table-hover text-center mb-0">
                 <thead class="table-light">
                     <tr>
                         <th>Date</th>
@@ -148,43 +209,47 @@
                         <th>Out Time</th>
                         <th>Worked Hours</th>
                         <th>Overtime</th>
-                        <th>Late</th>
-                        <th>Leave Deduction</th>
+                        <th>Late Minutes</th>
+                        <th>Half-Day Deduction</th>
+                        <th>Salary Deduction</th>
+                        <th>Total Earned</th>
                         <th>Notes</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for day_data in calendar_data %}
-                        {% if day_data.attendance %}
                         <tr>
                             <td>{{ day_data.date|date:"M d, Y" }}</td>
-                            <td>
-                                <span class="badge bg-{% if day_data.attendance.status == 'present' %}success
-                                                    {% elif day_data.attendance.status == 'absent' %}danger
-                                                    {% else %}warning{% endif %}">
-                                    {{ day_data.attendance.get_status_display }}
-                                </span>
-                            </td>
-                            <td>{{ day_data.attendance.in_time|default:"-" }}</td>
-                            <td>{{ day_data.attendance.out_time|default:"-" }}</td>
-                            <td>{{ day_data.worked_hours|default:"-" }}h</td>
-                            <td>{{ day_data.attendance.overtime_hours|default:"-" }}h</td>
-                            <td>
-                                {% if day_data.is_late %}
-                                    <span class="badge bg-danger">Late {{ day_data.late_minutes }} min</span>
-                                {% else %}-{% endif %}
-                            </td>
-                            <td>{{ day_data.attendance.leave_deduction|default:"-" }}</td>
-                            <td>{{ day_data.attendance.notes|default:"-" }}</td>
+                            {% if day_data.attendance %}
+                                <td>{{ day_data.attendance.get_status_display }}</td>
+                                <td>{{ day_data.attendance.in_time|default:"-" }}</td>
+                                <td>{{ day_data.attendance.out_time|default:"-" }}</td>
+                                <td>{{ day_data.worked_hours|default:"-" }}</td>
+                                <td>{{ day_data.overtime_hours|default:"-" }}</td>
+                                <td>{{ day_data.late_minutes|default:"-" }}</td>
+                                <td>{{ day_data.half_day_deduction|default:"-" }}</td>
+                                <td>{{ day_data.salary_deduction|default:"-" }}</td>
+                                <td>{{ day_data.total_earned|default:"-" }}</td>
+                                <td>{{ day_data.attendance.notes|default:"-" }}</td>
+                            {% elif day_data.is_holiday %}
+                                <td colspan="10" class="text-center text-muted">Holiday</td>
+                            {% else %}
+                                <td colspan="10" class="text-center text-muted">No Data</td>
+                            {% endif %}
                         </tr>
-                        {% elif day_data.is_holiday %}
-                        <tr class="table-light">
-                            <td>{{ day_data.date|date:"M d, Y" }}</td>
-                            <td colspan="8" class="text-center text-muted">Holiday</td>
-                        </tr>
-                        {% endif %}
                     {% endfor %}
                 </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <th colspan="1">Total</th>
+                        <th>{{ total_present }} Present / {{ total_half_day }} Half Days / {{ total_absent }} Absent</th>
+                        <th colspan="2"></th>
+                        <th>{{ total_worked_hours|floatformat:1 }}h</th>
+                        <th>{{ total_overtime_hours|floatformat:1 }}h</th>
+                        <th>{{ total_late_days }} Days</th>
+                        <th colspan="3"></th>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     </div>
@@ -196,6 +261,25 @@
     border: 2px solid red !important;
     border-radius: 50%;
     background-color: #ffe6e6;
+}
+.half-day {
+    border: 2px solid orange !important;
+    border-radius: 50%;
+    background-color: #fff4e6;
+}
+
+.stats-card {
+    border-radius: 0.75rem;
+    padding: 1rem;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+.stats-card h5 {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+.stats-card p, .stats-card input {
+    margin-bottom: 0.3rem;
 }
 </style>
 {% endblock %}
