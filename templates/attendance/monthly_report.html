@@ -30,8 +30,6 @@
 <!-- Salary Cards Row -->
 <form method="POST" class="row mb-4 g-3">
     {% csrf_token %}
-
-    <!-- Base Salary -->
     <div class="col-md-3">
         <div class="stats-card bg-secondary text-white p-3 rounded shadow-sm text-center">
             <h5>Base Salary</h5>
@@ -39,7 +37,6 @@
         </div>
     </div>
 
-    <!-- Loan Dues -->
     <div class="col-md-3">
         <div class="stats-card bg-danger text-white p-3 rounded shadow-sm text-center">
             <h5>Loan Dues</h5>
@@ -49,7 +46,6 @@
         </div>
     </div>
 
-    <!-- Earned Salary -->
     <div class="col-md-3">
         <div class="stats-card bg-primary text-white p-3 rounded shadow-sm text-center">
             <h5>Earned Salary</h5>
@@ -68,12 +64,11 @@
         </div>
     </div>
 
-    <!-- Overtime Pay -->
     <div class="col-md-3">
         <div class="stats-card bg-warning text-dark p-3 rounded shadow-sm text-center">
             <h5>Overtime Pay</h5>
             <p>
-                {{ overtime_amount|floatformat:0 }} PKR
+                {{ total_overtime_hours|floatformat:2 }} PKR
                 <small class="d-block text-muted">
                     ({{ total_overtime_hours|floatformat:2 }} h × {{ per_hour_wage|floatformat:2 }} PKR)
                 </small>
@@ -81,20 +76,16 @@
         </div>
     </div>
 
-    <!-- Deductions -->
     <div class="col-md-3">
         <div class="stats-card bg-danger text-white p-3 rounded shadow-sm text-center">
             <h5>Deductions</h5>
             <p>
                 {{ deductions_amount|floatformat:0 }} PKR
-                <small class="d-block text-muted">
-                    (Loans + Festival + Late/Half-day)
-                </small>
+                <small class="d-block text-muted">(Loans + Festival + Late/Half-day)</small>
             </p>
         </div>
     </div>
 
-    <!-- Festival Deduction -->
     <div class="col-md-3">
         <div class="stats-card bg-warning text-dark p-3 rounded shadow-sm text-center">
             <h5>Festival Deduction</h5>
@@ -103,7 +94,6 @@
         </div>
     </div>
 
-    <!-- Allowance -->
     <div class="col-md-3">
         <div class="stats-card bg-info text-white p-3 rounded shadow-sm text-center">
             <h5>Allowance</h5>
@@ -112,7 +102,6 @@
         </div>
     </div>
 
-    <!-- Final Salary -->
     <div class="col-md-3">
         <div class="stats-card bg-success text-white p-3 rounded shadow-sm text-center">
             <h5>Final Salary</h5>
@@ -120,7 +109,6 @@
         </div>
     </div>
 
-    <!-- Action Buttons -->
     <div class="col-6">
         <button type="submit" class="btn btn-primary btn-lg w-100">Update Salary</button>
     </div>
@@ -131,10 +119,6 @@
         </a>
     </div>
 </form>
-
-
-
-
 
 <!-- Navigation -->
 <div class="d-flex justify-content-end mb-3">
@@ -164,26 +148,34 @@
                     </tr>
                 </thead>
                 <tbody>
+                    {% with first_day=calendar_data.0.date.weekday %}
+                        {% for blank in ""|ljust:first_day|stringformat:"s" %}
+                            {% if forloop.first %}<tr>{% endif %}
+                            <td class="bg-light text-muted">-</td>
+                        {% endfor %}
+                    {% endwith %}
+
                     {% for day_data in calendar_data %}
-                        {% if forloop.first or forloop.counter0|divisibleby:7 %}<tr>{% endif %}
-                        <td style="height: 90px; vertical-align:top;"
-                            class="{% if day_data.is_late %}late-day{% endif %}
-                                   {% if day_data.attendance and day_data.attendance.status == 'half_day' %}half-day{% endif %}
+                        {% if forloop.first and first_day == 0 %}<tr>{% endif %}
+                        {% if not forloop.first and forloop.counter0|add:first_day|divisibleby:7 %}</tr><tr>{% endif %}
+                        <td style="height:90px; vertical-align:top;"
+                            class="{% if day_data.is_late %}bg-danger text-white{% endif %}
+                                   {% if day_data.half_day_deduction > 0 %}bg-warning text-dark{% endif %}
                                    {% if day_data.is_holiday %}bg-light text-muted{% endif %}">
                             <strong>{{ day_data.day }}</strong>
                             <div class="small mt-1">
                                 {% if day_data.attendance %}
-                                    <span class="badge bg-{% if day_data.attendance.status == 'present' %}success
+                                    <span class="badge bg-{% if day_data.half_day_deduction == 0 and day_data.attendance.status == 'present' %}success
                                                                 {% elif day_data.attendance.status == 'absent' %}danger
                                                                 {% else %}warning{% endif %}">
-                                        {{ day_data.attendance.get_status_display }}
+                                        {% if day_data.half_day_deduction > 0 %}Half Day{% else %}{{ day_data.attendance.get_status_display }}{% endif %}
                                     </span>
                                     <div class="text-success">WH: {{ day_data.worked_hours }}h</div>
                                     <div class="text-warning">OT: {{ day_data.overtime_hours }}h</div>
                                     {% if day_data.is_late %}
                                         <div class="text-danger">Late {{ day_data.late_minutes }} min</div>
                                     {% endif %}
-                                    {% if day_data.attendance.status == 'half_day' %}
+                                    {% if day_data.half_day_deduction > 0 %}
                                         <div class="text-warning">Half Day Deduction</div>
                                     {% endif %}
                                 {% elif day_data.is_holiday %}
@@ -193,8 +185,8 @@
                                 {% endif %}
                             </div>
                         </td>
-                        {% if forloop.counter|divisibleby:7 %}</tr>{% endif %}
                     {% endfor %}
+                    {% if not calendar_data|length|add:first_day|divisibleby:7 %}</tr>{% endif %}
                 </tbody>
             </table>
         </div>
@@ -229,7 +221,7 @@
                         <tr>
                             <td>{{ day_data.date|date:"M d, Y" }}</td>
                             {% if day_data.attendance %}
-                                <td>{{ day_data.attendance.get_status_display }}</td>
+                                <td>{% if day_data.half_day_deduction > 0 %}Half Day{% else %}{{ day_data.attendance.get_status_display }}{% endif %}</td>
                                 <td>{{ day_data.attendance.in_time|default:"-" }}</td>
                                 <td>{{ day_data.attendance.out_time|default:"-" }}</td>
                                 <td>{{ day_data.worked_hours|default:"-" }}</td>
