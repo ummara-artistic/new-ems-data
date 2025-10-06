@@ -103,9 +103,20 @@
     </div>
 
     <div class="col-md-3">
-        <div class="stats-card bg-success text-white p-3 rounded shadow-sm text-center">
+        <div class="stats-card bg-primary text-white p-3 rounded shadow-sm text-center">
             <h5>Final Salary</h5>
-            <p>{{ final_salary_amount|floatformat:0 }} PKR</p>
+            <p>
+                {{ earned_salary_amount|floatformat:0 }} PKR
+                <small class="d-block text-muted">
+                    (
+                    {% if total_present > 0 %}
+                        {{ total_present }} day{% if total_present > 1 %}s{% endif %} × {{ per_day_wage|floatformat:2 }} PKR
+                    {% else %}
+                        0 day × {{ per_day_wage|floatformat:2 }} PKR
+                    {% endif %}
+                    )
+                </small>
+            </p>
         </div>
     </div>
 
