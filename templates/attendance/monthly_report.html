@@ -133,7 +133,6 @@
     </div>
 </div>
 
-<!-- Calendar View -->
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-primary text-white">
         <i class="fas fa-calendar me-2"></i>{{ month_name }} {{ year }} Calendar
@@ -148,27 +147,36 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% with first_day=calendar_data.0.date.weekday %}
+                    {# FIX: compute how many blanks before Sunday #}
+                    {% with first_day=calendar_data.0.date.isoweekday %} {# Monday=1 ... Sunday=7 #}
                         {% for blank in ""|ljust:first_day|stringformat:"s" %}
                             {% if forloop.first %}<tr>{% endif %}
-                            <td class="bg-light text-muted">-</td>
+                            {% if forloop.counter < 7 %}
+                                <td class="bg-white text-muted">-</td>
+                            {% endif %}
                         {% endfor %}
                     {% endwith %}
 
                     {% for day_data in calendar_data %}
-                        {% if forloop.first and first_day == 0 %}<tr>{% endif %}
-                        {% if not forloop.first and forloop.counter0|add:first_day|divisibleby:7 %}</tr><tr>{% endif %}
+                        {% if forloop.first %}{% elif forloop.counter0|add:calendar_data.0.date.isoweekday|divisibleby:7 %}</tr><tr>{% endif %}
+
                         <td style="height:90px; vertical-align:top;"
-                            class="{% if day_data.is_late %}bg-danger text-white{% endif %}
-                                   {% if day_data.half_day_deduction > 0 %}bg-warning text-dark{% endif %}
-                                   {% if day_data.is_holiday %}bg-light text-muted{% endif %}">
+                            class="
+                                {% if day_data.is_late %}bg-danger text-white{% endif %}
+                                {% if day_data.half_day_deduction > 0 %}bg-warning text-dark{% endif %}
+                                {% if day_data.is_holiday %}bg-info-subtle text-dark{% endif %}
+                            ">
                             <strong>{{ day_data.day }}</strong>
                             <div class="small mt-1">
                                 {% if day_data.attendance %}
                                     <span class="badge bg-{% if day_data.half_day_deduction == 0 and day_data.attendance.status == 'present' %}success
                                                                 {% elif day_data.attendance.status == 'absent' %}danger
                                                                 {% else %}warning{% endif %}">
-                                        {% if day_data.half_day_deduction > 0 %}Half Day{% else %}{{ day_data.attendance.get_status_display }}{% endif %}
+                                        {% if day_data.half_day_deduction > 0 %}
+                                            Half Day
+                                        {% else %}
+                                            {{ day_data.attendance.get_status_display }}
+                                        {% endif %}
                                     </span>
                                     <div class="text-success">WH: {{ day_data.worked_hours }}h</div>
                                     <div class="text-warning">OT: {{ day_data.overtime_hours }}h</div>
@@ -179,19 +187,21 @@
                                         <div class="text-warning">Half Day Deduction</div>
                                     {% endif %}
                                 {% elif day_data.is_holiday %}
-                                    <span>Holiday</span>
+                                    <span class="badge bg-info">Sunday Holiday</span>
                                 {% else %}
                                     <span class="text-muted">-</span>
                                 {% endif %}
                             </div>
                         </td>
                     {% endfor %}
-                    {% if not calendar_data|length|add:first_day|divisibleby:7 %}</tr>{% endif %}
+                    {% if not calendar_data|length|add:calendar_data.0.date.isoweekday|divisibleby:7 %}</tr>{% endif %}
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+
+
 
 <!-- Detailed Records Table -->
 <div class="card shadow-sm mb-4">
